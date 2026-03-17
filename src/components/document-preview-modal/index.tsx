@@ -122,6 +122,9 @@ export const DocumentPreviewModal = ({
   const [pdfPreviewPages, setPdfPreviewPages] = useState<PdfPreviewPage[]>([]);
   const [pdfPreviewError, setPdfPreviewError] = useState<string | null>(null);
   const [isLoadingPdf, setIsLoadingPdf] = useState(false);
+  const shouldShowOpenAction =
+    Boolean(selectedDocument && fileUrl) &&
+    (kind === "pdf" ? pdfPreviewPages.length === 0 && !isLoadingPdf : kind !== "image");
 
   useEffect(() => {
     if (!open || !selectedDocument || kind !== "pdf" || !fileUrl) {
@@ -245,6 +248,17 @@ export const DocumentPreviewModal = ({
               <Button key="close" onClick={onClose}>
                 Cerrar
               </Button>,
+              shouldShowOpenAction ? (
+                <Button
+                  key="open"
+                  icon={<EyeOutlined />}
+                  href={fileUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Abrir archivo
+                </Button>
+              ) : null,
               <Button
                 key="download"
                 type="primary"
@@ -301,28 +315,6 @@ export const DocumentPreviewModal = ({
                   "Puedes abrirlo en otra pestaña o descargarlo para revisarlo."
                 }
               />
-              <Space wrap>
-                <Button
-                  type="primary"
-                  icon={<EyeOutlined />}
-                  href={fileUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  Abrir en otra pestaña
-                </Button>
-                <Button
-                  icon={<DownloadOutlined />}
-                  href={fileUrl}
-                  download={
-                    selectedDocument.file?.name ?? selectedDocument.title
-                  }
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  Descargar PDF
-                </Button>
-              </Space>
             </Space>
           </div>
         )
@@ -347,26 +339,6 @@ export const DocumentPreviewModal = ({
               Este tipo de archivo no se puede previsualizar dentro del
               navegador, pero ya está disponible para abrir o descargar.
             </Paragraph>
-            <Space wrap>
-              <Button
-                icon={<EyeOutlined />}
-                href={fileUrl}
-                target="_blank"
-                rel="noreferrer"
-              >
-                Abrir archivo
-              </Button>
-              <Button
-                type="primary"
-                icon={<DownloadOutlined />}
-                href={fileUrl}
-                download={selectedDocument.file?.name ?? selectedDocument.title}
-                target="_blank"
-                rel="noreferrer"
-              >
-                Descargar
-              </Button>
-            </Space>
           </Space>
         </div>
       )}
