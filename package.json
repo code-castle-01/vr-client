@@ -45,7 +45,7 @@
   "scripts": {
     "dev": "refine dev",
     "build": "tsc && refine build",
-    "start": "refine start",
+    "start": "node server.mjs",
     "refine": "refine"
   },
   "browserslist": {

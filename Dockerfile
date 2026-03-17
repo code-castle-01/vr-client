@@ -1,6 +1,4 @@
-# This Dockerfile uses `serve` npm package to serve the static files with node process.
-# You can find the Dockerfile for nginx in the following link:
-# https://github.com/refinedev/dockerfiles/blob/main/vite/Dockerfile.nginx
+# This Dockerfile builds the Vite app and serves `dist` with a lightweight Node server.
 FROM refinedev/node:18 AS base
 
 FROM base as deps
@@ -28,10 +26,9 @@ FROM base as runner
 
 ENV NODE_ENV production
 
-RUN npm install -g serve
-
-COPY --from=builder /app/refine/dist ./
+COPY --from=builder /app/refine/dist ./dist
+COPY --from=builder /app/refine/server.mjs ./server.mjs
 
 USER refine
 
-CMD ["serve"]
+CMD ["node", "server.mjs"]
