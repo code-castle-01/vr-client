@@ -9,8 +9,10 @@ import App from "./App";
 import { RootErrorBoundary } from "./components";
 import "./styles/global.css";
 import "./survey";
+import { initializeDeviceMode } from "./utils/device-mode";
 
 dayjs.locale("es");
+initializeDeviceMode();
 
 const container = document.getElementById("root") as HTMLElement;
 const root = createRoot(container);

@@ -1803,6 +1803,171 @@ body {
   }
 }
 
+html[data-vr-layout="mobile"] .vr-app-shell .ant-layout-content {
+  padding: 16px;
+}
+
+html[data-vr-layout="mobile"] .vr-resident-shell {
+  padding: 0;
+}
+
+html[data-vr-layout="mobile"] .vr-resident-frame {
+  width: 100%;
+  min-height: 100dvh;
+  gap: 12px;
+}
+
+html[data-vr-layout="mobile"] .vr-auth-shell {
+  padding: 16px;
+}
+
+html[data-vr-layout="mobile"] .vr-auth-brand,
+html[data-vr-layout="mobile"] .vr-auth-form-wrap {
+  padding: 24px;
+}
+
+html[data-vr-layout="mobile"] .vr-auth-brand {
+  min-height: auto;
+}
+
+html[data-vr-layout="mobile"] .vr-auth-brand-media {
+  width: 100%;
+  border-radius: 20px;
+}
+
+html[data-vr-layout="mobile"] .vr-auth-brand-video {
+  aspect-ratio: 16 / 10;
+}
+
+html[data-vr-layout="mobile"] .vr-summary-grid {
+  grid-template-columns: 1fr;
+}
+
+html[data-vr-layout="mobile"] .vr-resident-header {
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 18px 16px 10px;
+  border-radius: 0;
+}
+
+html[data-vr-layout="mobile"] .vr-error-boundary-shell {
+  padding: 16px;
+}
+
+html[data-vr-layout="mobile"] .vr-error-boundary-details {
+  padding: 18px;
+}
+
+html[data-vr-layout="mobile"] .vr-proxy-collapse-metrics {
+  grid-template-columns: 1fr;
+}
+
+html[data-vr-layout="mobile"] .vr-proxy-resident-card {
+  flex-direction: column;
+}
+
+html[data-vr-layout="mobile"] .vr-proxy-resident-meta {
+  min-width: 0;
+}
+
+html[data-vr-layout="mobile"] .vr-proxy-preview-frame {
+  min-height: 60dvh;
+}
+
+html[data-vr-layout="mobile"] .vr-resident-header-action {
+  width: 100%;
+  justify-content: flex-end;
+}
+
+html[data-vr-layout="mobile"] .vr-resident-greeting {
+  flex: 1;
+  width: 100%;
+}
+
+html[data-vr-layout="mobile"] .vr-resident-brand {
+  width: 100%;
+  align-items: flex-start;
+}
+
+html[data-vr-layout="mobile"] .vr-resident-name {
+  font-size: 18px;
+  letter-spacing: 0.08em;
+}
+
+html[data-vr-layout="mobile"] .vr-resident-banner {
+  min-height: 56px;
+  padding: 12px 16px;
+  border-radius: 0;
+}
+
+html[data-vr-layout="mobile"] .vr-resident-banner__title {
+  width: 100%;
+  padding-right: 110px;
+  font-size: 18px;
+  text-align: center;
+  letter-spacing: 0.12em;
+}
+
+html[data-vr-layout="mobile"] .vr-resident-banner__unit {
+  right: 10px;
+  min-height: 28px;
+  padding-inline: 10px;
+  font-size: 13px;
+}
+
+html[data-vr-layout="mobile"] .vr-resident-main {
+  padding: 0 16px 24px;
+}
+
+html[data-vr-layout="mobile"] .vr-resident-nav__link {
+  min-width: 118px;
+}
+
+html[data-vr-layout="mobile"] .vr-document-preview-fallback,
+html[data-vr-layout="mobile"] .vr-document-preview-loading {
+  min-height: 38dvh;
+  padding: 20px;
+  border-radius: 18px;
+}
+
+html[data-vr-layout="mobile"] .vr-document-card__body {
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+html[data-vr-layout="mobile"] .vr-survey-host .sd-header {
+  padding: 18px 18px 0;
+}
+
+html[data-vr-layout="mobile"] .vr-survey-host .sd-body {
+  padding: 10px 18px 18px;
+}
+
+html[data-vr-layout="mobile"] .vr-survey-complete {
+  padding: 18px;
+}
+
+html[data-vr-layout="mobile"] .vr-survey-complete__hero {
+  flex-direction: column;
+}
+
+html[data-vr-layout="mobile"] .vr-results-question-shell {
+  padding: 16px;
+}
+
+html[data-vr-layout="mobile"] .vr-results-question-shell .ant-typography {
+  font-size: 28px;
+}
+
+html[data-vr-layout="mobile"] .vr-results-question-meta {
+  flex-direction: column;
+  gap: 8px;
+}
+
+html[data-vr-layout="mobile"] .vr-results-question-meta span {
+  width: 100%;
+}
+
 @media (max-width: 575px) {
   .vr-auth-shell {
     padding: 10px;
@@ -1828,6 +1993,31 @@ body {
   .vr-auth-panel-title {
     font-size: clamp(1.75rem, 8vw, 2.2rem) !important;
   }
+}
+
+html[data-vr-layout="mobile"][data-vr-density="compact"] .vr-auth-shell {
+  padding: 10px;
+}
+
+html[data-vr-layout="mobile"][data-vr-density="compact"] .vr-auth-card {
+  border-radius: 22px;
+}
+
+html[data-vr-layout="mobile"][data-vr-density="compact"] .vr-auth-brand,
+html[data-vr-layout="mobile"][data-vr-density="compact"] .vr-auth-form-wrap {
+  padding: 16px;
+}
+
+html[data-vr-layout="mobile"][data-vr-density="compact"] .vr-auth-brand-media {
+  border-radius: 18px;
+}
+
+html[data-vr-layout="mobile"][data-vr-density="compact"] .vr-auth-brand-video {
+  aspect-ratio: 16 / 11;
+}
+
+html[data-vr-layout="mobile"][data-vr-density="compact"] .vr-auth-panel-title {
+  font-size: clamp(1.75rem, 8vw, 2.2rem) !important;
 }
 
 @media (min-width: 768px) {
