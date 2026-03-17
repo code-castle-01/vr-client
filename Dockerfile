@@ -1,5 +1,5 @@
 # This Dockerfile builds the Vite app and serves `dist` with a lightweight Node server.
-FROM refinedev/node:18 AS base
+FROM refinedev/node:20 AS base
 
 FROM base as deps
 
