@@ -62,6 +62,30 @@ import {
 } from "./pages/resident";
 import { UserCreate, UserEdit, UserList } from "./pages/users";
 
+const formatDocumentTitle = ({
+  pathname,
+  resource,
+}: {
+  pathname?: string;
+  resource?: {
+    meta?: {
+      label?: string;
+    };
+  };
+}) => {
+  if (pathname === "/login") {
+    return `Login | ${APP_NAME}`;
+  }
+
+  const resourceLabel = resource?.meta?.label?.trim();
+
+  if (resourceLabel) {
+    return `${resourceLabel} | ${APP_NAME}`;
+  }
+
+  return APP_NAME;
+};
+
 function App() {
   return (
     <BrowserRouter>
@@ -286,7 +310,7 @@ function App() {
 
                   <RefineKbar />
                   <UnsavedChangesNotifier />
-                  <DocumentTitleHandler />
+                  <DocumentTitleHandler handler={formatDocumentTitle} />
                 </Refine>
               </AppErrorBoundary>
               <DevtoolsPanel />

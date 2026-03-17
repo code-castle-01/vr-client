@@ -25,6 +25,7 @@ const contentTypes = {
 };
 
 const indexPath = path.join(distDir, "index.html");
+const runtimeConfigScriptPath = "/app-config.js";
 
 const sendFile = async (res, filePath) => {
   const ext = path.extname(filePath).toLowerCase();
@@ -38,10 +39,29 @@ const sendFile = async (res, filePath) => {
   createReadStream(filePath).pipe(res);
 };
 
+const getRuntimeConfigScript = () => {
+  const apiUrl = (process.env.VITE_API_URL || "").trim();
+
+  return `window.__APP_CONFIG__ = ${JSON.stringify({
+    VITE_API_URL: apiUrl,
+  })};`;
+};
+
 http
   .createServer(async (req, res) => {
     try {
       const requestPath = decodeURIComponent((req.url || "/").split("?")[0]);
+
+      if (requestPath === runtimeConfigScriptPath) {
+        const script = getRuntimeConfigScript();
+        res.writeHead(200, {
+          "Cache-Control": "no-store",
+          "Content-Type": "text/javascript; charset=utf-8",
+        });
+        res.end(script);
+        return;
+      }
+
       const normalizedPath = requestPath === "/" ? "/index.html" : requestPath;
       const resolvedPath = path.normalize(path.join(distDir, normalizedPath));
 
