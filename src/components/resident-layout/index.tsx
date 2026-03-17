@@ -4,6 +4,7 @@ import { Button, Flex, Typography, message } from "antd";
 import { useEffect, useState } from "react";
 import { NavLink, Outlet } from "react-router";
 import { updateCurrentAccountName } from "../../authProvider";
+import { AppLogo } from "../app-logo";
 
 type Identity = {
   name?: string | null;
@@ -77,7 +78,7 @@ export const ResidentLayout = () => {
           gap={24}
         >
           <div className="vr-resident-brand">
-            <img src="/logo.png" alt="Logo Vegas del Rio" width={60} />
+            <AppLogo alt="Logo CCVR" priority size={46} />
 
             <div className="vr-resident-greeting">
               <Typography.Text className="vr-resident-kicker">

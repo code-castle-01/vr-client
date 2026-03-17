@@ -1,7 +1,9 @@
+import { AppLogo } from "../app-logo";
+
 export const BrandTitle = () => {
   return (
     <div className="vr-brand-title">
-      <img src="/logo.png" alt="Logo de Vegas del Rio" width={60} />
+      <AppLogo alt="Logo CCVR" priority size={52} />
     </div>
   );
 };

@@ -5,7 +5,7 @@ import "survey-core/i18n/spanish";
 import "survey-creator-core/i18n/spanish";
 
 export const SURVEY_DEFAULT_LOCALE = "es";
-export const SURVEY_LOGO_URL = "/logo.png";
+export const SURVEY_LOGO_URL = "/logo-ui.png";
 export const OFFICIAL_VOTE_QUESTION = "official_vote";
 
 surveyLocalization.defaultLocale = SURVEY_DEFAULT_LOCALE;

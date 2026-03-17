@@ -1,11 +1,12 @@
 import {
   ArrowLeftOutlined,
+  CameraOutlined,
   CheckCircleOutlined,
   DeleteOutlined,
+  FileAddOutlined,
   FilePdfOutlined,
   FileProtectOutlined,
   IdcardOutlined,
-  InboxOutlined,
   UserOutlined,
 } from "@ant-design/icons";
 import { useCustom, useCustomMutation, useGetIdentity } from "@refinedev/core";
@@ -24,10 +25,9 @@ import {
   Space,
   Tag,
   Typography,
-  Upload,
 } from "antd";
-import type { UploadFile } from "antd/es/upload/interface";
-import { useMemo, useState } from "react";
+import type { RcFile, UploadFile } from "antd/es/upload/interface";
+import { useMemo, useRef, useState } from "react";
 import { API_URL } from "../../constants";
 
 type Identity = {
@@ -77,6 +77,118 @@ type ProxyFormValues = {
     residentId?: number;
     support?: UploadFile[];
   }>;
+};
+
+type ProxySupportUploaderProps = {
+  disabled?: boolean;
+  value?: UploadFile[];
+  onChange?: (nextValue: UploadFile[]) => void;
+};
+
+const createUploadFile = (file: File): UploadFile => {
+  const rcFile = Object.assign(file, {
+    uid: `${file.name}-${file.lastModified}`,
+    lastModifiedDate: new Date(file.lastModified),
+  }) as RcFile;
+
+  return {
+    uid: rcFile.uid,
+    name: rcFile.name,
+    originFileObj: rcFile,
+    size: rcFile.size,
+    status: "done",
+    type: rcFile.type,
+  };
+};
+
+const ProxySupportUploader = ({
+  disabled = false,
+  value,
+  onChange,
+}: ProxySupportUploaderProps) => {
+  const cameraInputRef = useRef<HTMLInputElement | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const selectedFile = value?.[0];
+
+  const handleFileSelection = (fileList: FileList | null) => {
+    const nextFile = fileList?.[0];
+
+    if (!nextFile) {
+      return;
+    }
+
+    onChange?.([createUploadFile(nextFile)]);
+  };
+
+  return (
+    <div className="vr-support-uploader">
+      <input
+        ref={cameraInputRef}
+        hidden
+        type="file"
+        accept="image/*"
+        capture="environment"
+        onChange={(event) => {
+          handleFileSelection(event.target.files);
+          event.target.value = "";
+        }}
+      />
+      <input
+        ref={fileInputRef}
+        hidden
+        type="file"
+        accept=".pdf,.jpg,.jpeg,.png,.webp,image/*,application/pdf"
+        onChange={(event) => {
+          handleFileSelection(event.target.files);
+          event.target.value = "";
+        }}
+      />
+
+      <Space direction="vertical" size={12} style={{ width: "100%" }}>
+        <Space wrap>
+          <Button
+            icon={<CameraOutlined />}
+            onClick={() => cameraInputRef.current?.click()}
+            disabled={disabled}
+          >
+            Tomar foto
+          </Button>
+          <Button
+            icon={<FileAddOutlined />}
+            onClick={() => fileInputRef.current?.click()}
+            disabled={disabled}
+          >
+            Elegir archivo
+          </Button>
+          {selectedFile ? (
+            <Button type="text" danger onClick={() => onChange?.([])} disabled={disabled}>
+              Quitar
+            </Button>
+          ) : null}
+        </Space>
+
+        <div className="vr-support-uploader__hint">
+          Usa la cámara para fotografiar el poder firmado o selecciona un PDF,
+          JPG, PNG o WEBP desde tu dispositivo.
+        </div>
+
+        <div className="vr-support-uploader__status">
+          {selectedFile ? (
+            <>
+              <Typography.Text strong>{selectedFile.name}</Typography.Text>
+              <Typography.Text type="secondary">
+                {selectedFile.type || "Archivo listo para enviar"}
+              </Typography.Text>
+            </>
+          ) : (
+            <Typography.Text type="secondary">
+              Ningún soporte seleccionado todavía.
+            </Typography.Text>
+          )}
+        </div>
+      </Space>
+    </div>
+  );
 };
 
 export const ProxyCenterPage = () => {
@@ -215,12 +327,6 @@ export const ProxyCenterPage = () => {
 
       message.error(nextMessage);
     }
-  };
-
-  const uploadProps = {
-    accept: ".pdf,.jpg,.jpeg,.png,.webp",
-    beforeUpload: () => false,
-    maxCount: 1,
   };
 
   const handleBackToDecision = () => {
@@ -556,11 +662,6 @@ export const ProxyCenterPage = () => {
                               <Form.Item
                                 label="Soporte del poder"
                                 name={["declarations", index, "support"]}
-                                valuePropName="fileList"
-                                getValueFromEvent={(event) => {
-                                  const fileList = event?.fileList ?? [];
-                                  return fileList.slice(-1);
-                                }}
                                 rules={[
                                   {
                                     validator: async (
@@ -575,7 +676,7 @@ export const ProxyCenterPage = () => {
                                         (!value || value.length === 0)
                                       ) {
                                         throw new Error(
-                                          "Adjunta el soporte del poder.",
+                                        "Adjunta el soporte del poder.",
                                         );
                                       }
 
@@ -584,18 +685,7 @@ export const ProxyCenterPage = () => {
                                   },
                                 ]}
                               >
-                                <Upload.Dragger {...uploadProps}>
-                                  <p className="ant-upload-drag-icon">
-                                    <InboxOutlined />
-                                  </p>
-                                  <p className="ant-upload-text">
-                                    Subir PDF o imagen firmada
-                                  </p>
-                                  <p className="ant-upload-hint">
-                                    Un archivo por residente. Máximo dos
-                                    poderes.
-                                  </p>
-                                </Upload.Dragger>
+                                <ProxySupportUploader />
                               </Form.Item>
                             </Col>
                           </Row>

@@ -73,14 +73,38 @@ const formatDocumentTitle = ({
     };
   };
 }) => {
-  if (pathname === "/login") {
-    return `Login | ${APP_NAME}`;
+  const routeTitles: Array<[string, string]> = [
+    ["/login", "Login"],
+    ["/representacion", "Poderes"],
+    ["/encuestas", "Encuestas"],
+    ["/documentos", "Documentos"],
+    ["/mis-resultados", "Resultados"],
+    ["/assemblies", "Asambleas"],
+    ["/agenda-items", "Encuestas"],
+    ["/users", "Usuarios"],
+    ["/archivos", "Archivos"],
+    ["/resultados", "Resultados"],
+    ["/administracion", "Panel"],
+  ];
+
+  const matchedRouteTitle = routeTitles.find(([routePath]) =>
+    pathname?.startsWith(routePath),
+  )?.[1];
+
+  if (matchedRouteTitle) {
+    return `${matchedRouteTitle} | ${APP_NAME}`;
   }
 
   const resourceLabel = resource?.meta?.label?.trim();
+  const hasValidResourceLabel =
+    Boolean(resourceLabel) && !/undefined/i.test(resourceLabel ?? "");
 
-  if (resourceLabel) {
+  if (hasValidResourceLabel) {
     return `${resourceLabel} | ${APP_NAME}`;
+  }
+
+  if (pathname === "/login") {
+    return `Login | ${APP_NAME}`;
   }
 
   return APP_NAME;

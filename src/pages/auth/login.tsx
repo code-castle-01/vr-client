@@ -13,7 +13,6 @@ import {
   Typography,
 } from "antd";
 import { SafetyCertificateOutlined, TeamOutlined } from "@ant-design/icons";
-import { APP_NAME } from "../../constants";
 
 type LoginFormValues = {
   identifier: string;
@@ -49,32 +48,18 @@ export const LoginPage = () => {
           <Row gutter={0}>
             <Col xs={24} lg={12}>
               <div className="vr-auth-brand">
-                <div className="vr-auth-badge">Conjunto residencial</div>
-                <Typography.Title level={1} className="vr-auth-title">
-                  {APP_NAME}
-                </Typography.Title>
-                <Typography.Paragraph className="vr-auth-description">
-                  Gestion profesional para asambleas, control de votaciones y
-                  administracion de copropietarios desde una sola plataforma.
-                </Typography.Paragraph>
-
-                <img
-                  src="/logo.png"
-                  alt="Logo del conjunto Vegas del Rio"
-                  className="vr-auth-brand-logo"
-                />
-
-                <div className="vr-auth-points">
-                  <div className="vr-auth-point">
-                    <strong>Experiencia preparada para celular</strong>
-                    Navega, valida y vota con una interfaz clara, elegante y
-                    optimizada para pantallas pequeñas.
-                  </div>
-                  <div className="vr-auth-point">
-                    <strong>Seguridad para la asamblea</strong>
-                    Cada ingreso usa credenciales personales y conserva el
-                    rastro de la sesion de trabajo.
-                  </div>
+                <div className="vr-auth-brand-media">
+                  <video
+                    className="vr-auth-brand-video"
+                    autoPlay
+                    loop
+                    muted
+                    playsInline
+                    poster="/logo-ui.png"
+                    preload="metadata"
+                  >
+                    <source src="/VR-VIDEO.mp4" type="video/mp4" />
+                  </video>
                 </div>
               </div>
             </Col>
@@ -92,9 +77,8 @@ export const LoginPage = () => {
                       Ingreso a la asamblea
                     </Typography.Title>
                     <Typography.Paragraph className="vr-auth-panel-copy">
-                      Usa tu unidad privada o el correo registrado para entrar
-                      al portal. Si eres administrador, desde aqui podras
-                      gestionar usuarios, asambleas y encuestas.
+                      Usa tu unidad privada para entrar al portal. El
+                      administrador, gestionará usuarios, asambleas y encuestas.
                     </Typography.Paragraph>
                   </div>
 
@@ -109,7 +93,7 @@ export const LoginPage = () => {
                     requiredMark={false}
                   >
                     <Form.Item
-                      label="Unidad o correo"
+                      label="Unidad"
                       name="identifier"
                       rules={[
                         {
@@ -120,7 +104,7 @@ export const LoginPage = () => {
                     >
                       <Input
                         autoComplete="username"
-                        placeholder="Ej. M1-01 o m1-01"
+                        placeholder="Ejemplo: M1-01 / m2-02"
                         size="large"
                       />
                     </Form.Item>

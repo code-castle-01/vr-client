@@ -27,11 +27,30 @@ const contentTypes = {
 const indexPath = path.join(distDir, "index.html");
 const runtimeConfigScriptPath = "/app-config.js";
 
+const getCacheControl = (filePath) => {
+  const normalizedPath = filePath.replace(/\\/g, "/");
+
+  if (normalizedPath.endsWith("/index.html") || normalizedPath.endsWith("/app-config.js")) {
+    return "no-store";
+  }
+
+  if (
+    normalizedPath.includes("/assets/") ||
+    normalizedPath.endsWith("/logo-ui.png") ||
+    normalizedPath.endsWith("/favicon.ico")
+  ) {
+    return "public, max-age=31536000, immutable";
+  }
+
+  return "public, max-age=86400";
+};
+
 const sendFile = async (res, filePath) => {
   const ext = path.extname(filePath).toLowerCase();
   const fileStats = await stat(filePath);
 
   res.writeHead(200, {
+    "Cache-Control": getCacheControl(filePath),
     "Content-Length": fileStats.size,
     "Content-Type": contentTypes[ext] || "application/octet-stream",
   });

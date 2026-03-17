@@ -2,6 +2,7 @@ import { useGetIdentity } from "@refinedev/core";
 import { Result, Typography } from "antd";
 import { Navigate, Outlet } from "react-router";
 import { isAdminRole, type UserRole } from "../../auth-utils";
+import { AppLogo } from "../app-logo";
 
 type Identity = {
   role?: UserRole;
@@ -11,10 +12,11 @@ const LoadingScreen = () => (
   <div className="vr-loading-screen">
     <div className="vr-loading-screen__inner">
       <div className="vr-loading-screen__logo-shell">
-        <img
+        <AppLogo
           className="vr-loading-screen__logo"
-          src="/logo.png"
-          alt="Logo de Vegas del Rio"
+          alt="Logo CCVR"
+          priority
+          size={104}
         />
       </div>
       <Typography.Text className="vr-loading-screen__label">

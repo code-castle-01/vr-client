@@ -1,4 +1,5 @@
 export { Header } from "./header";
+export { AppLogo } from "./app-logo";
 export { AppSider } from "./app-sider";
 export { BrandTitle } from "./brand-title";
 export { BrandedSurvey } from "./branded-survey";
