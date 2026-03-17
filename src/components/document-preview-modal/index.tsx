@@ -106,7 +106,7 @@ export const DocumentPreviewModal = ({
   const [isLoadingPdf, setIsLoadingPdf] = useState(false);
 
   useEffect(() => {
-    if (!open || !document || kind !== "pdf" || !fileUrl || isMobileLayout) {
+    if (!open || !document || kind !== "pdf" || !fileUrl) {
       setPdfPreviewUrl(null);
       setPdfPreviewError(null);
       setIsLoadingPdf(false);
@@ -163,15 +163,21 @@ export const DocumentPreviewModal = ({
         URL.revokeObjectURL(nextObjectUrl);
       }
     };
-  }, [document, fileUrl, isMobileLayout, kind, open]);
+  }, [document, fileUrl, kind, open]);
 
   return (
     <Modal
+      className={isMobileLayout ? "vr-document-modal vr-document-modal--mobile" : "vr-document-modal"}
       destroyOnClose
       open={open}
       title={document?.title ?? "Documento"}
-      width={960}
+      width={isMobileLayout ? "100%" : 960}
       onCancel={onClose}
+      styles={{
+        body: {
+          padding: isMobileLayout ? 12 : 24,
+        },
+      }}
       footer={
         document && fileUrl
           ? [
@@ -196,51 +202,27 @@ export const DocumentPreviewModal = ({
       {!document || !fileUrl ? (
         <Empty description="No encontramos un archivo para visualizar." />
       ) : kind === "pdf" ? (
-        isMobileLayout ? (
-          <div className="vr-document-preview-fallback">
-            <div className="vr-document-preview-fallback__icon">
-              <FilePdfOutlined />
-            </div>
-            <Space direction="vertical" size={8} style={{ width: "100%" }}>
-              <Text strong>{document.file?.name ?? document.title}</Text>
-              <Paragraph type="secondary" style={{ marginBottom: 0 }}>
-                En dispositivos moviles es mas estable abrir el PDF en otra
-                pestaña para conservar la calidad de lectura sin sacarte del
-                sistema.
-              </Paragraph>
-              <Space wrap>
-                <Button
-                  type="primary"
-                  icon={<EyeOutlined />}
-                  href={fileUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  Abrir en otra pestaña
-                </Button>
-                <Button
-                  icon={<DownloadOutlined />}
-                  href={fileUrl}
-                  download={document.file?.name ?? document.title}
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  Descargar PDF
-                </Button>
-              </Space>
-            </Space>
-          </div>
-        ) : isLoadingPdf ? (
+        isLoadingPdf ? (
           <div className="vr-document-preview-loading">
             <Spin size="large" />
             <Text type="secondary">Preparando vista previa del PDF...</Text>
           </div>
         ) : pdfPreviewUrl ? (
-          <iframe
-            title={document.title}
-            src={pdfPreviewUrl}
-            className="vr-proxy-preview-frame"
-          />
+          <div className="vr-document-preview-frame-shell">
+            {isMobileLayout ? (
+              <Alert
+                showIcon
+                type="info"
+                message="Visualizacion dentro de la app"
+                description="Si el PDF no se ve bien en tu navegador, puedes abrirlo en otra pestaña o descargarlo desde los botones del modal."
+              />
+            ) : null}
+            <iframe
+              title={document.title}
+              src={pdfPreviewUrl}
+              className={`vr-proxy-preview-frame${isMobileLayout ? " vr-proxy-preview-frame--mobile" : ""}`}
+            />
+          </div>
         ) : (
           <div className="vr-document-preview-fallback">
             <div className="vr-document-preview-fallback__icon">
