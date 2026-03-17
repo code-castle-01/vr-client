@@ -1,5 +1,5 @@
 import { useGetIdentity } from "@refinedev/core";
-import { Result, Spin } from "antd";
+import { Result, Typography } from "antd";
 import { Navigate, Outlet } from "react-router";
 import { isAdminRole, type UserRole } from "../../auth-utils";
 
@@ -8,14 +8,22 @@ type Identity = {
 };
 
 const LoadingScreen = () => (
-  <div
-    style={{
-      minHeight: "100dvh",
-      display: "grid",
-      placeItems: "center",
-    }}
-  >
-    <Spin size="large" />
+  <div className="vr-loading-screen">
+    <div className="vr-loading-screen__inner">
+      <div className="vr-loading-screen__logo-shell">
+        <img
+          className="vr-loading-screen__logo"
+          src="/logo.png"
+          alt="Logo de Vegas del Rio"
+        />
+      </div>
+      <Typography.Text className="vr-loading-screen__label">
+        Ingresando al portal
+      </Typography.Text>
+      <Typography.Text className="vr-loading-screen__hint">
+        Estamos preparando tu experiencia.
+      </Typography.Text>
+    </div>
   </div>
 );
 

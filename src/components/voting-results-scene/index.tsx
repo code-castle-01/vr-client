@@ -104,6 +104,34 @@ type ResultsOverviewResponse = {
   };
 };
 
+type ResidentBallotResponse = {
+  surveys: Array<{
+    assembly?: {
+      date: string | null;
+      id: number;
+      title: string | null;
+    } | null;
+    existingVote?: {
+      ids: number[];
+      selectedOptionIds: number[];
+      weight: number;
+    } | null;
+    id: number;
+    options: Array<{
+      id: number;
+      text: string;
+    }>;
+  }>;
+};
+
+type ResidentAnsweredSurvey = {
+  assemblyDate: string | null;
+  assemblyTitle: string;
+  responseLabel: string;
+  responseWeight: number;
+  selectedOptionIds: number[];
+};
+
 const optionPalette = ["#c9822f", "#f0b64d", "#56708a", "#7b8da4", "#9da9b6"];
 
 const formatWeight = (value: number) => value.toFixed(2);
@@ -113,6 +141,8 @@ const formatDate = (value: string | null) =>
 
 const formatExportDate = (value: string | null) =>
   value ? dayjs(value).format("DD/MM/YYYY HH:mm") : "Sin fecha";
+
+const sanitizePdfText = (value: string) => value.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 
 const buildResultsExportRows = (assemblies: AssemblyResult[]) =>
   assemblies.flatMap((assembly) =>
@@ -371,8 +401,50 @@ export const VotingResultsScene = ({
       staleTime: 30_000,
     },
   });
+  const ballotQuery = useCustom<ResidentBallotResponse>({
+    method: "get",
+    url: `${API_URL}/api/votes/ballot`,
+    errorNotification: false,
+    queryOptions: {
+      enabled: audience === "resident",
+      refetchOnWindowFocus: false,
+      retry: 0,
+      staleTime: 30_000,
+    },
+  });
 
   const overview = overviewQuery.query.data?.data;
+  const ballot = ballotQuery.query.data?.data;
+
+  const answeredSurveysById = useMemo(() => {
+    if (audience !== "resident" || !ballot) {
+      return new Map<number, ResidentAnsweredSurvey>();
+    }
+
+    return new Map(
+      ballot.surveys
+        .filter((survey) => Boolean(survey.existingVote))
+        .map((survey) => {
+          const selectedOptionIds = survey.existingVote?.selectedOptionIds ?? [];
+          const selectedOptions = survey.options.filter((option) =>
+            selectedOptionIds.includes(option.id),
+          );
+
+          return [
+            survey.id,
+            {
+              assemblyDate: survey.assembly?.date ?? null,
+              assemblyTitle: survey.assembly?.title ?? "Asamblea actual",
+              responseLabel: selectedOptions.length
+                ? selectedOptions.map((option) => option.text).join(", ")
+                : "Respuesta registrada",
+              responseWeight: survey.existingVote?.weight ?? 0,
+              selectedOptionIds,
+            },
+          ] satisfies [number, ResidentAnsweredSurvey];
+        }),
+    );
+  }, [audience, ballot]);
 
   const filteredAssemblies = useMemo(() => {
     if (!overview) {
@@ -392,6 +464,19 @@ export const VotingResultsScene = ({
       }))
       .filter((assembly) => assembly.surveys.length > 0);
   }, [filter, overview]);
+
+  const residentExportAssemblies = useMemo(() => {
+    if (audience !== "resident") {
+      return [];
+    }
+
+    return filteredAssemblies
+      .map((assembly) => ({
+        ...assembly,
+        surveys: assembly.surveys.filter((survey) => answeredSurveysById.has(survey.id)),
+      }))
+      .filter((assembly) => assembly.surveys.length > 0);
+  }, [audience, answeredSurveysById, filteredAssemblies]);
   const exportRows = useMemo(
     () => buildResultsExportRows(filteredAssemblies),
     [filteredAssemblies],
@@ -518,6 +603,204 @@ export const VotingResultsScene = ({
     }
   };
 
+  const handleExportResidentPdf = async () => {
+    if (!overview || !ballot) {
+      message.warning("Aun estamos cargando tus resultados. Intenta nuevamente.");
+      return;
+    }
+
+    if (ballotQuery.query.isError) {
+      message.error("No pudimos validar tus respuestas para armar el PDF.");
+      return;
+    }
+
+    if (!residentExportAssemblies.length) {
+      message.warning("No tienes encuestas respondidas dentro del filtro actual.");
+      return;
+    }
+
+    setExporting("pdf");
+
+    try {
+      const [{ default: JsPdf }, { default: autoTable }] = await Promise.all([
+        import("jspdf"),
+        import("jspdf-autotable"),
+      ]);
+      const document = new JsPdf({
+        orientation: "portrait",
+        unit: "pt",
+        format: "a4",
+      });
+
+      let cursorY = 40;
+
+      document.setFillColor(252, 248, 239);
+      document.roundedRect(24, 24, 547, 794, 24, 24, "F");
+      document.setFontSize(20);
+      document.setTextColor(24, 48, 66);
+      document.text(sanitizePdfText("Mis encuestas respondidas"), 40, cursorY);
+      cursorY += 20;
+
+      document.setFontSize(10);
+      document.setTextColor(91, 102, 114);
+      document.text(
+        sanitizePdfText(
+          `Filtro: ${filterLabel} | Generado: ${formatExportDate(overview.generatedAt)}`,
+        ),
+        40,
+        cursorY,
+      );
+      cursorY += 18;
+      document.text(
+        sanitizePdfText(
+          "Este archivo resume solo las preguntas que ya respondiste y el estado actual de cada votacion.",
+        ),
+        40,
+        cursorY,
+      );
+      cursorY += 24;
+
+      residentExportAssemblies.forEach((assembly, assemblyIndex) => {
+        if (cursorY > 700) {
+          document.addPage();
+          cursorY = 40;
+        }
+
+        document.setFillColor(239, 196, 106);
+        document.roundedRect(32, cursorY - 16, 531, 40, 18, 18, "F");
+        document.setFontSize(14);
+        document.setTextColor(24, 48, 66);
+        document.text(sanitizePdfText(assembly.title), 48, cursorY + 2);
+        document.setFontSize(9);
+        document.setTextColor(91, 102, 114);
+        document.text(
+          sanitizePdfText(
+            `${formatExportDate(assembly.date)} · ${assembly.surveys.length} preguntas respondidas`,
+          ),
+          48,
+          cursorY + 18,
+        );
+        cursorY += 42;
+
+        assembly.surveys.forEach((survey, surveyIndex) => {
+          const response = answeredSurveysById.get(survey.id);
+
+          if (!response) {
+            return;
+          }
+
+          if (cursorY > 620) {
+            document.addPage();
+            cursorY = 40;
+          }
+
+          document.setFillColor(255, 255, 255);
+          document.roundedRect(32, cursorY - 8, 531, 124, 18, 18, "F");
+          document.setDrawColor(230, 214, 188);
+          document.roundedRect(32, cursorY - 8, 531, 124, 18, 18, "S");
+
+          document.setFontSize(9);
+          document.setTextColor(191, 122, 45);
+          document.text(sanitizePdfText(`Pregunta ${surveyIndex + 1}`), 48, cursorY + 8);
+
+          document.setFontSize(14);
+          document.setTextColor(24, 48, 66);
+          document.text(sanitizePdfText(survey.questionTitle), 48, cursorY + 28, {
+            maxWidth: 355,
+          });
+
+          document.setFontSize(9);
+          document.setTextColor(91, 102, 114);
+          const contextLine = [
+            survey.sectionTitle ? `Seccion: ${survey.sectionTitle}` : "",
+            survey.surveyTitle ? `Encuesta: ${survey.surveyTitle}` : "",
+          ]
+            .filter(Boolean)
+            .join(" · ");
+
+          if (contextLine) {
+            document.text(sanitizePdfText(contextLine), 48, cursorY + 46, {
+              maxWidth: 355,
+            });
+          }
+
+          if (survey.questionDescription) {
+            document.text(
+              sanitizePdfText(survey.questionDescription),
+              48,
+              cursorY + 64,
+              { maxWidth: 355 },
+            );
+          }
+
+          autoTable(document, {
+            body: [
+              [
+                "Tu respuesta",
+                sanitizePdfText(response.responseLabel),
+              ],
+              [
+                "Estado actual",
+                sanitizePdfText(
+                  survey.winningOption
+                    ? `Ganando: ${survey.winningOption.text}`
+                    : resultStateMap[survey.resultStatus].title,
+                ),
+              ],
+              [
+                "Participacion",
+                sanitizePdfText(
+                  `${survey.summary.totalVotes} votos · peso ${formatWeight(
+                    survey.summary.totalWeight,
+                  )}`,
+                ),
+              ],
+              [
+                "Tipo de mayoria",
+                sanitizePdfText(
+                  survey.requiresSpecialMajority ? "Mayoría 70%" : "Mayoría simple",
+                ),
+              ],
+            ],
+            columnStyles: {
+              0: { cellWidth: 92, fontStyle: "bold" },
+              1: { cellWidth: 148 },
+            },
+            margin: { left: 385, right: 40 },
+            startY: cursorY,
+            styles: {
+              cellPadding: 6,
+              fillColor: [255, 252, 246],
+              fontSize: 8.5,
+              lineColor: [230, 214, 188],
+              lineWidth: 0.5,
+              overflow: "linebreak",
+              textColor: [24, 48, 66],
+            },
+            theme: "grid",
+          });
+
+          cursorY += 138;
+        });
+
+        if (assemblyIndex < residentExportAssemblies.length - 1) {
+          cursorY += 8;
+        }
+      });
+
+      document.save(`mis-resultados-respondidos-${filterLabel}-${fileStamp}.pdf`);
+      message.success("Tu PDF personal fue generado correctamente.");
+    } catch (error) {
+      message.error(
+        error instanceof Error
+          ? error.message
+          : "No fue posible generar tu PDF personal.",
+      );
+    } finally {
+      setExporting(null);
+    }
+  };
+
   return (
     <Space direction="vertical" size={20} style={{ width: "100%" }}>
       <PageIntro
@@ -556,7 +839,15 @@ export const VotingResultsScene = ({
                     PDF
                   </Button>
                 </>
-              ) : null}
+              ) : (
+                <Button
+                  icon={<FilePdfOutlined />}
+                  loading={exporting === "pdf"}
+                  onClick={handleExportResidentPdf}
+                >
+                  Descargar PDF
+                </Button>
+              )}
 
               <Button
                 icon={<ReloadOutlined />}

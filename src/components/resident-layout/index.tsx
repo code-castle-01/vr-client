@@ -10,25 +10,8 @@ type Identity = {
   unit?: string | null;
 };
 
-const navStyle = ({ isActive }: { isActive: boolean }) => ({
-  alignItems: "center",
-  background: isActive
-    ? "linear-gradient(135deg, rgba(191, 122, 45, 0.16), rgba(247, 198, 106, 0.22))"
-    : "rgba(255, 250, 242, 0.72)",
-  border: "1px solid rgba(139, 76, 22, 0.12)",
-  borderRadius: 18,
-  color: "#17232f",
-  display: "inline-flex",
-  fontSize: 14,
-  fontWeight: 700,
-  gap: 8,
-  justifyContent: "center",
-  minHeight: 48,
-  minWidth: 126,
-  padding: "10px 20px",
-  textDecoration: "none",
-  whiteSpace: "nowrap" as const,
-});
+const getNavClassName = ({ isActive }: { isActive: boolean }) =>
+  `vr-resident-nav__link${isActive ? " vr-resident-nav__link--active" : ""}`;
 
 export const ResidentLayout = () => {
   const { data: identity, refetch } = useGetIdentity<Identity>();
@@ -140,16 +123,16 @@ export const ResidentLayout = () => {
 
         <section className="vr-resident-main">
           <div className="vr-resident-nav">
-            <NavLink to="/representacion" style={navStyle}>
+            <NavLink to="/representacion" className={getNavClassName}>
               Poderes
             </NavLink>
-            <NavLink to="/encuestas" style={navStyle}>
+            <NavLink to="/encuestas" className={getNavClassName}>
               Encuestas
             </NavLink>
-            <NavLink to="/documentos" style={navStyle}>
+            <NavLink to="/documentos" className={getNavClassName}>
               Documentos
             </NavLink>
-            <NavLink to="/mis-resultados" style={navStyle}>
+            <NavLink to="/mis-resultados" className={getNavClassName}>
               Resultados
             </NavLink>
           </div>
