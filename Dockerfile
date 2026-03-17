@@ -1,7 +1,10 @@
 # This Dockerfile builds the Vite app and serves `dist` with a lightweight Node server.
-FROM refinedev/node:20 AS base
+# pdfjs-dist@5.5.x requires Node >= 20.19.0, so we pin a compatible base image.
+FROM node:20.19.0-bookworm-slim AS base
 
-FROM base as deps
+WORKDIR /app/refine
+
+FROM base AS deps
 
 COPY package.json yarn.lock* package-lock.json* pnpm-lock.yaml* .npmrc* ./
 
@@ -12,7 +15,7 @@ RUN \
   else echo "Lockfile not found, falling back to npm install." && npm install; \
   fi
 
-FROM base as builder
+FROM base AS builder
 
 ENV NODE_ENV production
 
@@ -22,13 +25,13 @@ COPY . .
 
 RUN npm run build
 
-FROM base as runner
+FROM base AS runner
 
 ENV NODE_ENV production
 
 COPY --from=builder /app/refine/dist ./dist
 COPY --from=builder /app/refine/server.mjs ./server.mjs
 
-USER refine
+USER node
 
 CMD ["node", "server.mjs"]

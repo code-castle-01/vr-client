@@ -7,6 +7,63 @@
       name="viewport"
       content="width=device-width, initial-scale=1, viewport-fit=cover"
     />
+    <script>
+      (function () {
+        var root = document.documentElement;
+        var mobileUserAgent =
+          /android|iphone|ipad|ipod|iemobile|opera mini|mobile|silk/i;
+
+        function syncDeviceMode() {
+          try {
+            var screenWidth = Math.min(
+              window.screen && window.screen.width ? window.screen.width : 0,
+              window.screen && window.screen.height ? window.screen.height : 0,
+            );
+            var devicePixelRatio = Math.max(window.devicePixelRatio || 1, 1);
+            var logicalScreenWidth = screenWidth / devicePixelRatio;
+            var coarsePointer =
+              window.matchMedia &&
+              (window.matchMedia("(pointer: coarse)").matches ||
+                window.matchMedia("(any-pointer: coarse)").matches);
+            var touchDevice =
+              "ontouchstart" in window || (navigator.maxTouchPoints || 0) > 0;
+            var narrowViewport =
+              window.matchMedia &&
+              window.matchMedia("(max-width: 991px)").matches;
+            var compactViewport =
+              window.matchMedia &&
+              window.matchMedia("(max-width: 575px)").matches;
+            var handheldDevice =
+              screenWidth > 0 &&
+              (screenWidth <= 1280 || logicalScreenWidth <= 820) &&
+              (coarsePointer ||
+                touchDevice ||
+                mobileUserAgent.test(navigator.userAgent || ""));
+            var mobileLayout = Boolean(narrowViewport || handheldDevice);
+            var compactLayout = Boolean(
+              compactViewport ||
+                (screenWidth > 0 && screenWidth <= 575) ||
+                logicalScreenWidth <= 575,
+            );
+
+            root.dataset.vrLayout = mobileLayout ? "mobile" : "desktop";
+            root.dataset.vrDensity =
+              mobileLayout && compactLayout ? "compact" : "regular";
+            root.classList.toggle("vr-handheld", mobileLayout);
+          } catch (error) {
+            root.dataset.vrLayout = "desktop";
+            root.dataset.vrDensity = "regular";
+            root.classList.remove("vr-handheld");
+          }
+        }
+
+        syncDeviceMode();
+        window.addEventListener("resize", syncDeviceMode, { passive: true });
+        window.addEventListener("orientationchange", syncDeviceMode, {
+          passive: true,
+        });
+      })();
+    </script>
     <meta name="theme-color" content="#000000" />
     <meta
       name="description"

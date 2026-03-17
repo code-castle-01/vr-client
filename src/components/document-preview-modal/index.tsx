@@ -108,21 +108,23 @@ type DocumentPreviewModalProps = {
 
 export const DocumentPreviewModal = ({
   baseUrl,
-  document,
+  document: selectedDocument,
   onClose,
   open,
 }: DocumentPreviewModalProps) => {
-  const fileUrl = document
-    ? buildMeetingDocumentUrl(baseUrl, document.file?.url)
+  const fileUrl = selectedDocument
+    ? buildMeetingDocumentUrl(baseUrl, selectedDocument.file?.url)
     : null;
-  const kind = document ? getMeetingDocumentKind(document) : "file";
+  const kind = selectedDocument
+    ? getMeetingDocumentKind(selectedDocument)
+    : "file";
   const { isMobileLayout } = useDeviceLayout();
   const [pdfPreviewPages, setPdfPreviewPages] = useState<PdfPreviewPage[]>([]);
   const [pdfPreviewError, setPdfPreviewError] = useState<string | null>(null);
   const [isLoadingPdf, setIsLoadingPdf] = useState(false);
 
   useEffect(() => {
-    if (!open || !document || kind !== "pdf" || !fileUrl) {
+    if (!open || !selectedDocument || kind !== "pdf" || !fileUrl) {
       setPdfPreviewPages([]);
       setPdfPreviewError(null);
       setIsLoadingPdf(false);
@@ -161,7 +163,7 @@ export const DocumentPreviewModal = ({
               ? PDF_RENDER_SCALE_MOBILE
               : PDF_RENDER_SCALE_DESKTOP,
           });
-          const canvas = document.createElement("canvas");
+          const canvas = globalThis.document.createElement("canvas");
           const context = canvas.getContext("2d");
 
           if (!context) {
@@ -172,6 +174,7 @@ export const DocumentPreviewModal = ({
           canvas.height = Math.ceil(viewport.height);
 
           await page.render({
+            canvas,
             canvasContext: context,
             viewport,
           }).promise;
@@ -217,7 +220,7 @@ export const DocumentPreviewModal = ({
 
       nextObjectUrls.forEach((pageUrl) => URL.revokeObjectURL(pageUrl));
     };
-  }, [document, fileUrl, isMobileLayout, kind, open]);
+  }, [selectedDocument, fileUrl, isMobileLayout, kind, open]);
 
   return (
     <Modal
@@ -228,7 +231,7 @@ export const DocumentPreviewModal = ({
       }
       destroyOnClose
       open={open}
-      title={document?.title ?? "Documento"}
+      title={selectedDocument?.title ?? "Documento"}
       width={isMobileLayout ? "100%" : 960}
       onCancel={onClose}
       styles={{
@@ -237,7 +240,7 @@ export const DocumentPreviewModal = ({
         },
       }}
       footer={
-        document && fileUrl
+        selectedDocument && fileUrl
           ? [
               <Button key="close" onClick={onClose}>
                 Cerrar
@@ -247,7 +250,7 @@ export const DocumentPreviewModal = ({
                 type="primary"
                 icon={<DownloadOutlined />}
                 href={fileUrl}
-                download={document.file?.name ?? document.title}
+                download={selectedDocument.file?.name ?? selectedDocument.title}
                 target="_blank"
                 rel="noreferrer"
               >
@@ -257,7 +260,7 @@ export const DocumentPreviewModal = ({
           : null
       }
     >
-      {!document || !fileUrl ? (
+      {!selectedDocument || !fileUrl ? (
         <Empty description="No encontramos un archivo para visualizar." />
       ) : kind === "pdf" ? (
         isLoadingPdf ? (
@@ -268,12 +271,6 @@ export const DocumentPreviewModal = ({
         ) : pdfPreviewPages.length > 0 ? (
           <div className="vr-document-preview-frame-shell">
             <Space direction="vertical" size={12} style={{ width: "100%" }}>
-              <Alert
-                showIcon
-                type="info"
-                message="Visualizacion dentro de la app"
-                description={`El documento se renderizo dentro del modal. Paginas cargadas: ${pdfPreviewPages.length}.`}
-              />
               <div className="vr-document-pdf-pages">
                 {pdfPreviewPages.map((page) => (
                   <figure
@@ -282,7 +279,7 @@ export const DocumentPreviewModal = ({
                   >
                     <img
                       src={page.src}
-                      alt={`${document.title} - pagina ${page.pageNumber}`}
+                      alt={`${selectedDocument.title} - pagina ${page.pageNumber}`}
                     />
                   </figure>
                 ))}
@@ -317,7 +314,9 @@ export const DocumentPreviewModal = ({
                 <Button
                   icon={<DownloadOutlined />}
                   href={fileUrl}
-                  download={document.file?.name ?? document.title}
+                  download={
+                    selectedDocument.file?.name ?? selectedDocument.title
+                  }
                   target="_blank"
                   rel="noreferrer"
                 >
@@ -331,7 +330,7 @@ export const DocumentPreviewModal = ({
         <div className="vr-proxy-preview-image-shell">
           <img
             src={fileUrl}
-            alt={document.title}
+            alt={selectedDocument.title}
             className="vr-proxy-preview-image"
           />
         </div>
@@ -341,7 +340,9 @@ export const DocumentPreviewModal = ({
             {getFallbackIcon(kind)}
           </div>
           <Space direction="vertical" size={8} style={{ width: "100%" }}>
-            <Text strong>{document.file?.name ?? document.title}</Text>
+            <Text strong>
+              {selectedDocument.file?.name ?? selectedDocument.title}
+            </Text>
             <Paragraph type="secondary" style={{ marginBottom: 0 }}>
               Este tipo de archivo no se puede previsualizar dentro del
               navegador, pero ya está disponible para abrir o descargar.
@@ -359,7 +360,7 @@ export const DocumentPreviewModal = ({
                 type="primary"
                 icon={<DownloadOutlined />}
                 href={fileUrl}
-                download={document.file?.name ?? document.title}
+                download={selectedDocument.file?.name ?? selectedDocument.title}
                 target="_blank"
                 rel="noreferrer"
               >
