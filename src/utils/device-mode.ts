@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
 
 const MOBILE_VIEWPORT_MAX = 991;
 const COMPACT_VIEWPORT_MAX = 575;
@@ -9,6 +9,43 @@ const MOBILE_USER_AGENT_PATTERN =
 
 type LayoutMode = "desktop" | "mobile";
 type LayoutDensity = "regular" | "compact";
+type LayoutState = {
+  layoutMode: LayoutMode;
+  density: LayoutDensity;
+};
+
+const LISTENER_OPTIONS: AddEventListenerOptions = {
+  passive: true,
+};
+
+const getViewportWidth = () =>
+  Math.max(
+    Math.round(window.visualViewport?.width ?? 0),
+    window.innerWidth || 0,
+    document.documentElement.clientWidth || 0,
+  );
+
+const getViewportHeight = () =>
+  Math.max(
+    Math.round(window.visualViewport?.height ?? 0),
+    window.innerHeight || 0,
+    document.documentElement.clientHeight || 0,
+  );
+
+const getNarrowScreenEdge = () => {
+  const screenEdge = Math.min(window.screen.width || 0, window.screen.height || 0);
+  const viewportWidth = getViewportWidth();
+  const viewportHeight = getViewportHeight();
+  const viewportEdge =
+    viewportWidth > 0 && viewportHeight > 0
+      ? Math.min(viewportWidth, viewportHeight)
+      : Math.max(viewportWidth, viewportHeight);
+  const candidateEdges = [screenEdge, viewportEdge].filter(
+    (edge): edge is number => edge > 0,
+  );
+
+  return candidateEdges.length ? Math.min(...candidateEdges) : 0;
+};
 
 const getNavigatorMobileHint = () => {
   const navigatorWithHints = navigator as Navigator & {
@@ -21,7 +58,7 @@ const getNavigatorMobileHint = () => {
 };
 
 const isHandheldDevice = () => {
-  const narrowScreenEdge = Math.min(window.screen.width || 0, window.screen.height || 0);
+  const narrowScreenEdge = getNarrowScreenEdge();
   const devicePixelRatio = Math.max(window.devicePixelRatio || 1, 1);
   const logicalScreenEdge = narrowScreenEdge / devicePixelRatio;
   const hasCoarsePointer =
@@ -41,7 +78,9 @@ const isHandheldDevice = () => {
 };
 
 const getLayoutMode = (): LayoutMode => {
-  if (window.matchMedia(`(max-width: ${MOBILE_VIEWPORT_MAX}px)`).matches) {
+  const viewportWidth = getViewportWidth();
+
+  if (viewportWidth > 0 && viewportWidth <= MOBILE_VIEWPORT_MAX) {
     return "mobile";
   }
 
@@ -49,11 +88,13 @@ const getLayoutMode = (): LayoutMode => {
 };
 
 const getLayoutDensity = (): LayoutDensity => {
-  if (window.matchMedia(`(max-width: ${COMPACT_VIEWPORT_MAX}px)`).matches) {
+  const viewportWidth = getViewportWidth();
+
+  if (viewportWidth > 0 && viewportWidth <= COMPACT_VIEWPORT_MAX) {
     return "compact";
   }
 
-  const narrowScreenEdge = Math.min(window.screen.width || 0, window.screen.height || 0);
+  const narrowScreenEdge = getNarrowScreenEdge();
   const devicePixelRatio = Math.max(window.devicePixelRatio || 1, 1);
   const logicalScreenEdge = narrowScreenEdge / devicePixelRatio;
 
@@ -63,14 +104,51 @@ const getLayoutDensity = (): LayoutDensity => {
     : "regular";
 };
 
-export const syncDeviceMode = () => {
-  const root = document.documentElement;
+const getLayoutState = (): LayoutState => {
   const layoutMode = getLayoutMode();
   const density = layoutMode === "mobile" ? getLayoutDensity() : "regular";
 
+  return {
+    layoutMode,
+    density,
+  };
+};
+
+const applyLayoutState = ({ layoutMode, density }: LayoutState) => {
+  const root = document.documentElement;
   root.dataset.vrLayout = layoutMode;
   root.dataset.vrDensity = density;
   root.classList.toggle("vr-handheld", layoutMode === "mobile");
+};
+
+const bindViewportChangeListeners = (listener: () => void) => {
+  if (typeof window === "undefined") {
+    return () => undefined;
+  }
+
+  const visualViewport = window.visualViewport;
+
+  window.addEventListener("resize", listener, LISTENER_OPTIONS);
+  window.addEventListener("orientationchange", listener, LISTENER_OPTIONS);
+  window.addEventListener("load", listener);
+  window.addEventListener("pageshow", listener);
+  visualViewport?.addEventListener("resize", listener, LISTENER_OPTIONS);
+
+  return () => {
+    window.removeEventListener("resize", listener);
+    window.removeEventListener("orientationchange", listener);
+    window.removeEventListener("load", listener);
+    window.removeEventListener("pageshow", listener);
+    visualViewport?.removeEventListener("resize", listener);
+  };
+};
+
+export const syncDeviceMode = () => {
+  const nextState = getLayoutState();
+
+  applyLayoutState(nextState);
+
+  return nextState;
 };
 
 export const initializeDeviceMode = () => {
@@ -80,19 +158,7 @@ export const initializeDeviceMode = () => {
 
   syncDeviceMode();
 
-  const handleViewportChange = () => {
-    syncDeviceMode();
-  };
-
-  window.addEventListener("resize", handleViewportChange, { passive: true });
-  window.addEventListener("orientationchange", handleViewportChange, {
-    passive: true,
-  });
-
-  return () => {
-    window.removeEventListener("resize", handleViewportChange);
-    window.removeEventListener("orientationchange", handleViewportChange);
-  };
+  return bindViewportChangeListeners(syncDeviceMode);
 };
 
 export const getClientLayoutMode = (): LayoutMode => {
@@ -106,35 +172,21 @@ export const getClientLayoutMode = (): LayoutMode => {
     return rootLayout;
   }
 
-  return getLayoutMode();
+  return syncDeviceMode().layoutMode;
 };
 
+const subscribeToDeviceLayout = (onStoreChange: () => void) =>
+  bindViewportChangeListeners(() => {
+    syncDeviceMode();
+    onStoreChange();
+  });
+
 export const useDeviceLayout = () => {
-  const [layoutMode, setLayoutMode] = useState<LayoutMode>(() =>
-    getClientLayoutMode(),
+  const layoutMode = useSyncExternalStore(
+    subscribeToDeviceLayout,
+    getClientLayoutMode,
+    () => "desktop",
   );
-
-  useEffect(() => {
-    if (typeof window === "undefined") {
-      return undefined;
-    }
-
-    const handleViewportChange = () => {
-      setLayoutMode(getLayoutMode());
-    };
-
-    handleViewportChange();
-
-    window.addEventListener("resize", handleViewportChange, { passive: true });
-    window.addEventListener("orientationchange", handleViewportChange, {
-      passive: true,
-    });
-
-    return () => {
-      window.removeEventListener("resize", handleViewportChange);
-      window.removeEventListener("orientationchange", handleViewportChange);
-    };
-  }, []);
 
   return {
     isMobileLayout: layoutMode === "mobile",

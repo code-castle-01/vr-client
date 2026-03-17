@@ -13,37 +13,78 @@
         var mobileUserAgent =
           /android|iphone|ipad|ipod|iemobile|opera mini|mobile|silk/i;
 
+        function getViewportWidth() {
+          var visualViewportWidth =
+            window.visualViewport && window.visualViewport.width
+              ? Math.round(window.visualViewport.width)
+              : 0;
+
+          return Math.max(
+            visualViewportWidth,
+            window.innerWidth || 0,
+            document.documentElement ? document.documentElement.clientWidth : 0
+          );
+        }
+
+        function getViewportHeight() {
+          var visualViewportHeight =
+            window.visualViewport && window.visualViewport.height
+              ? Math.round(window.visualViewport.height)
+              : 0;
+
+          return Math.max(
+            visualViewportHeight,
+            window.innerHeight || 0,
+            document.documentElement ? document.documentElement.clientHeight : 0
+          );
+        }
+
+        function getNarrowScreenEdge() {
+          var screenEdge = Math.min(
+            window.screen && window.screen.width ? window.screen.width : 0,
+            window.screen && window.screen.height ? window.screen.height : 0
+          );
+          var viewportWidth = getViewportWidth();
+          var viewportHeight = getViewportHeight();
+          var viewportEdge =
+            viewportWidth > 0 && viewportHeight > 0
+              ? Math.min(viewportWidth, viewportHeight)
+              : Math.max(viewportWidth, viewportHeight);
+          var edges = [screenEdge, viewportEdge].filter(function (value) {
+            return value > 0;
+          });
+
+          return edges.length ? Math.min.apply(Math, edges) : 0;
+        }
+
         function syncDeviceMode() {
           try {
-            var screenWidth = Math.min(
-              window.screen && window.screen.width ? window.screen.width : 0,
-              window.screen && window.screen.height ? window.screen.height : 0,
-            );
+            var screenWidth = getNarrowScreenEdge();
             var devicePixelRatio = Math.max(window.devicePixelRatio || 1, 1);
             var logicalScreenWidth = screenWidth / devicePixelRatio;
+            var viewportWidth = getViewportWidth();
             var coarsePointer =
               window.matchMedia &&
               (window.matchMedia("(pointer: coarse)").matches ||
                 window.matchMedia("(any-pointer: coarse)").matches);
             var touchDevice =
               "ontouchstart" in window || (navigator.maxTouchPoints || 0) > 0;
-            var narrowViewport =
-              window.matchMedia &&
-              window.matchMedia("(max-width: 991px)").matches;
-            var compactViewport =
-              window.matchMedia &&
-              window.matchMedia("(max-width: 575px)").matches;
+            var mobileHint = Boolean(
+              navigator.userAgentData && navigator.userAgentData.mobile
+            );
+            var userAgentLooksMobile =
+              mobileHint || mobileUserAgent.test(navigator.userAgent || "");
             var handheldDevice =
               screenWidth > 0 &&
               (screenWidth <= 1280 || logicalScreenWidth <= 820) &&
-              (coarsePointer ||
-                touchDevice ||
-                mobileUserAgent.test(navigator.userAgent || ""));
-            var mobileLayout = Boolean(narrowViewport || handheldDevice);
+              (coarsePointer || touchDevice || userAgentLooksMobile);
+            var mobileLayout = Boolean(
+              (viewportWidth > 0 && viewportWidth <= 991) || handheldDevice
+            );
             var compactLayout = Boolean(
-              compactViewport ||
+              (viewportWidth > 0 && viewportWidth <= 575) ||
                 (screenWidth > 0 && screenWidth <= 575) ||
-                logicalScreenWidth <= 575,
+                logicalScreenWidth <= 575
             );
 
             root.dataset.vrLayout = mobileLayout ? "mobile" : "desktop";
@@ -51,17 +92,34 @@
               mobileLayout && compactLayout ? "compact" : "regular";
             root.classList.toggle("vr-handheld", mobileLayout);
           } catch (error) {
-            root.dataset.vrLayout = "desktop";
-            root.dataset.vrDensity = "regular";
-            root.classList.remove("vr-handheld");
+            var fallbackWidth = getViewportWidth();
+            var fallbackMobile = Boolean(
+              (fallbackWidth > 0 && fallbackWidth <= 991) ||
+                mobileUserAgent.test(navigator.userAgent || "") ||
+                (navigator.maxTouchPoints || 0) > 0
+            );
+
+            root.dataset.vrLayout = fallbackMobile ? "mobile" : "desktop";
+            root.dataset.vrDensity =
+              fallbackMobile && fallbackWidth > 0 && fallbackWidth <= 575
+                ? "compact"
+                : "regular";
+            root.classList.toggle("vr-handheld", fallbackMobile);
           }
         }
 
         syncDeviceMode();
         window.addEventListener("resize", syncDeviceMode, { passive: true });
         window.addEventListener("orientationchange", syncDeviceMode, {
-          passive: true,
+          passive: true
         });
+        window.addEventListener("load", syncDeviceMode);
+        window.addEventListener("pageshow", syncDeviceMode);
+        if (window.visualViewport) {
+          window.visualViewport.addEventListener("resize", syncDeviceMode, {
+            passive: true
+          });
+        }
       })();
     </script>
     <meta name="theme-color" content="#000000" />

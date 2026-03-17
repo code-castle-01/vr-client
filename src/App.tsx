@@ -11,7 +11,6 @@ import {
 import {
   AuthPage,
   ErrorComponent,
-  ThemedLayout,
   useNotificationProvider,
 } from "@refinedev/antd";
 import "@refinedev/antd/dist/reset.css";
@@ -27,16 +26,14 @@ import routerProvider, {
 import { accessControlProvider } from "./accessControlProvider";
 import { authProvider, axiosInstance } from "./authProvider";
 import {
+  AdminLayout,
   AdminOnly,
-  AppSider,
   AppErrorBoundary,
-  BrandTitle,
   ResidentLayout,
   ResidentOnly,
   RoleLanding,
 } from "./components";
 import { AppIcon } from "./components/app-icon";
-import { Header } from "./components/header";
 import { API_URL, APP_NAME } from "./constants";
 import { ColorModeContextProvider } from "./contexts/color-mode";
 import { i18nProvider } from "./i18n";
@@ -208,23 +205,15 @@ function App() {
                       <Route element={<AdminOnly />}>
                         <Route
                           element={
-                            <div className="vr-app-shell">
-                              <ThemedLayout
-                                Header={Header}
-                                Title={BrandTitle}
-                                Sider={(props) => (
-                                  <AppSider {...props} fixed Title={BrandTitle} />
-                                )}
-                              >
-                                <Outlet />
-                              </ThemedLayout>
-                            </div>
+                            <AdminLayout>
+                              <Outlet />
+                            </AdminLayout>
                           }
                         >
-                        <Route
-                          path="/administracion"
-                          element={<NavigateToResource resource="assemblies" />}
-                        />
+                          <Route
+                            path="/administracion"
+                            element={<NavigateToResource resource="assemblies" />}
+                          />
                           <Route path="/assemblies">
                             <Route index element={<AssemblyList />} />
                             <Route path="create" element={<AssemblyCreate />} />

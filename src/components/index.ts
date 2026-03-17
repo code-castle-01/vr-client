@@ -1,3 +1,4 @@
+export { AdminLayout } from "./admin-layout";
 export { Header } from "./header";
 export { AppLogo } from "./app-logo";
 export { AppSider } from "./app-sider";

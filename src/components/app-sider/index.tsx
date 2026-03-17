@@ -2,7 +2,6 @@ import {
   BarsOutlined,
   LogoutOutlined,
 } from "@ant-design/icons";
-import { useThemedLayoutContext } from "@refinedev/antd";
 import {
   type TreeMenuItem,
   useIsExistAuthentication,
@@ -19,7 +18,7 @@ import {
   theme,
   type MenuProps,
 } from "antd";
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Link } from "react-router";
 import { useDeviceLayout } from "../../utils/device-mode";
 
@@ -59,19 +58,22 @@ const buildMenuItems = (tree: TreeMenuItem[]): MenuProps["items"] =>
 
 export const AppSider = ({ Title, fixed = false, meta }: AppSiderProps) => {
   const { token } = theme.useToken();
-  const {
-    mobileSiderOpen,
-    setMobileSiderOpen,
-  } = useThemedLayoutContext();
   const { menuItems, selectedKey, defaultOpenKeys } = useMenu({ meta });
   const { mutate: logout } = useLogout();
   const { warnWhen, setWarnWhen } = useWarnAboutChange();
   const translate = useTranslate();
   const isAuthenticated = useIsExistAuthentication();
   const { isMobileLayout } = useDeviceLayout();
+  const [mobileSiderOpen, setMobileSiderOpen] = useState(false);
 
   const titleNode = Title ? <Title collapsed={false} /> : null;
   const items = buildMenuItems(menuItems);
+
+  useEffect(() => {
+    if (!isMobileLayout) {
+      setMobileSiderOpen(false);
+    }
+  }, [isMobileLayout]);
 
   const handleLogout = () => {
     if (warnWhen) {

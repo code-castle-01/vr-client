@@ -44,13 +44,21 @@ body {
   background: transparent;
 }
 
+.vr-admin-layout {
+  min-height: 100dvh;
+}
+
+.vr-admin-layout__main {
+  min-width: 0;
+}
+
 .vr-app-shell .ant-layout-sider {
   background: linear-gradient(
     180deg,
     rgba(23, 35, 47, 0.98) 0%,
     rgba(29, 41, 54, 0.98) 100%
   );
-  border-inline-end: 12 solid rgba(244, 213, 154, 0.12);
+  border-inline-end: 1px solid rgba(244, 213, 154, 0.12);
   box-shadow: 14px 0 34px rgba(17, 23, 31, 0.18);
 }
 
@@ -79,7 +87,66 @@ body {
 }
 
 .vr-app-shell .ant-layout-content {
-  padding: 24px;
+  padding: 0;
+}
+
+.vr-admin-layout__content {
+  min-width: 0;
+}
+
+.vr-admin-layout__content-inner {
+  min-height: 360px;
+  padding: 16px;
+}
+
+.vr-admin-header {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  min-height: 76px;
+  padding: 16px;
+  border: 1px solid rgba(139, 76, 22, 0.08);
+  background: linear-gradient(
+    180deg,
+    rgba(255, 251, 243, 0.88),
+    rgba(255, 248, 238, 0.94)
+  );
+  box-shadow: 0 12px 30px rgba(23, 35, 47, 0.08);
+  backdrop-filter: blur(10px);
+}
+
+.vr-admin-header--sticky {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.vr-admin-header__copy {
+  flex: 1 1 240px;
+  min-width: 0;
+}
+
+.vr-admin-header__eyebrow {
+  display: block;
+  color: var(--vr-primary);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.vr-admin-header__title.ant-typography {
+  margin: 4px 0 0 !important;
+  font-family: "Cormorant Garamond", serif;
+}
+
+.vr-admin-header__status.ant-card {
+  width: 100%;
+  border-radius: 24px;
+  box-shadow: 0 14px 30px rgba(23, 35, 47, 0.08);
 }
 
 .vr-app-shell .ant-menu {
@@ -1859,7 +1926,7 @@ body {
 }
 
 html[data-vr-layout="mobile"] .vr-app-shell .ant-layout-content {
-  padding: 16px;
+  padding: 0;
 }
 
 html[data-vr-layout="mobile"] .vr-resident-shell {
@@ -2206,6 +2273,23 @@ html.vr-handheld[data-vr-density="compact"] .vr-auth-panel-title {
 
   .vr-results-question-shell {
     padding: 22px;
+  }
+}
+
+@media (min-width: 992px) {
+  .vr-admin-layout__content-inner {
+    padding: 24px;
+  }
+
+  .vr-admin-header {
+    flex-wrap: nowrap;
+    align-items: center;
+    padding: 24px 32px;
+  }
+
+  .vr-admin-header__status.ant-card {
+    width: auto;
+    min-width: 240px;
   }
 }
 
