@@ -25,9 +25,10 @@ import {
   Space,
   Tag,
   Typography,
+  Upload,
 } from "antd";
-import type { RcFile, UploadFile } from "antd/es/upload/interface";
-import { useMemo, useRef, useState } from "react";
+import type { UploadFile } from "antd/es/upload/interface";
+import { useMemo, useState } from "react";
 import { API_URL } from "../../constants";
 
 type Identity = {
@@ -85,81 +86,56 @@ type ProxySupportUploaderProps = {
   onChange?: (nextValue: UploadFile[]) => void;
 };
 
-const createUploadFile = (file: File): UploadFile => {
-  const rcFile = Object.assign(file, {
-    uid: `${file.name}-${file.lastModified}`,
-    lastModifiedDate: new Date(file.lastModified),
-  }) as RcFile;
-
-  return {
-    uid: rcFile.uid,
-    name: rcFile.name,
-    originFileObj: rcFile,
-    size: rcFile.size,
-    status: "done",
-    type: rcFile.type,
-  };
-};
+const normalizeUploadList = (fileList: UploadFile[]) =>
+  fileList
+    .slice(-1)
+    .map((file) => ({
+      ...file,
+      status: "done" as const,
+    }));
 
 const ProxySupportUploader = ({
   disabled = false,
   value,
   onChange,
 }: ProxySupportUploaderProps) => {
-  const cameraInputRef = useRef<HTMLInputElement | null>(null);
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const selectedFile = value?.[0];
-
-  const handleFileSelection = (fileList: FileList | null) => {
-    const nextFile = fileList?.[0];
-
-    if (!nextFile) {
-      return;
-    }
-
-    onChange?.([createUploadFile(nextFile)]);
-  };
 
   return (
     <div className="vr-support-uploader">
-      <input
-        ref={cameraInputRef}
-        hidden
-        type="file"
-        accept="image/*"
-        capture="environment"
-        onChange={(event) => {
-          handleFileSelection(event.target.files);
-          event.target.value = "";
-        }}
-      />
-      <input
-        ref={fileInputRef}
-        hidden
-        type="file"
-        accept=".pdf,.jpg,.jpeg,.png,.webp,image/*,application/pdf"
-        onChange={(event) => {
-          handleFileSelection(event.target.files);
-          event.target.value = "";
-        }}
-      />
-
       <Space direction="vertical" size={12} style={{ width: "100%" }}>
         <Space wrap>
-          <Button
-            icon={<CameraOutlined />}
-            onClick={() => cameraInputRef.current?.click()}
+          <Upload
+            accept="image/*"
+            beforeUpload={() => false}
+            capture="environment"
             disabled={disabled}
+            fileList={selectedFile ? [selectedFile] : []}
+            maxCount={1}
+            onChange={({ fileList }) => {
+              onChange?.(normalizeUploadList(fileList));
+            }}
+            showUploadList={false}
           >
-            Tomar foto
-          </Button>
-          <Button
-            icon={<FileAddOutlined />}
-            onClick={() => fileInputRef.current?.click()}
+            <Button icon={<CameraOutlined />} disabled={disabled}>
+              Tomar foto
+            </Button>
+          </Upload>
+          <Upload
+            accept=".pdf,.jpg,.jpeg,.png,.webp,image/*,application/pdf"
+            beforeUpload={() => false}
             disabled={disabled}
+            fileList={selectedFile ? [selectedFile] : []}
+            maxCount={1}
+            onChange={({ fileList }) => {
+              onChange?.(normalizeUploadList(fileList));
+            }}
+            showUploadList={false}
           >
-            Elegir archivo
-          </Button>
+            <Button icon={<FileAddOutlined />} disabled={disabled}>
+              Elegir archivo
+            </Button>
+          </Upload>
           {selectedFile ? (
             <Button type="text" danger onClick={() => onChange?.([])} disabled={disabled}>
               Quitar
@@ -662,6 +638,7 @@ export const ProxyCenterPage = () => {
                               <Form.Item
                                 label="Soporte del poder"
                                 name={["declarations", index, "support"]}
+                                valuePropName="value"
                                 rules={[
                                   {
                                     validator: async (
@@ -685,7 +662,9 @@ export const ProxyCenterPage = () => {
                                   },
                                 ]}
                               >
-                                <ProxySupportUploader />
+                                <ProxySupportUploader
+                                  disabled={submitDeclarations.mutation.isPending}
+                                />
                               </Form.Item>
                             </Col>
                           </Row>
