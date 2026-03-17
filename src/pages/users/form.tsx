@@ -9,6 +9,7 @@ export type UserFormValues = {
   blocked: boolean;
   email: string;
   password?: string;
+  role?: number;
 };
 
 type UserFormProps = {
@@ -72,7 +73,7 @@ export const UserForm = ({ form, isEdit, onFinish }: UserFormProps) => {
 
               <Col xs={24}>
                 <Form.Item
-                  label={isEdit ? "Nueva contrasena" : "Contrasena inicial"}
+                  label={isEdit ? "Nueva contraseña" : "contraseña inicial"}
                   name="password"
                   rules={
                     isEdit
@@ -80,25 +81,25 @@ export const UserForm = ({ form, isEdit, onFinish }: UserFormProps) => {
                           {
                             min: 6,
                             message:
-                              "La contrasena debe tener al menos 6 caracteres.",
+                              "La contraseña debe tener al menos 6 caracteres.",
                           },
                         ]
                       : [
                           {
                             required: true,
-                            message: "Ingresa una contrasena temporal.",
+                            message: "Ingresa una contraseña temporal.",
                           },
                           {
                             min: 6,
                             message:
-                              "La contrasena debe tener al menos 6 caracteres.",
+                              "La contraseña debe tener al menos 6 caracteres.",
                           },
                         ]
                   }
                   extra={
                     isEdit
-                      ? "Deja este campo vacio si no quieres cambiar la contrasena."
-                      : "El administrador puede compartir esta contrasena con el copropietario."
+                      ? "Deja este campo vacio si no quieres cambiar la contraseña."
+                      : "El administrador puede compartir esta contraseña con el copropietario."
                   }
                 >
                   <Input.Password placeholder="Minimo 6 caracteres" />

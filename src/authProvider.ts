@@ -41,11 +41,14 @@ export const getCurrentAccount = async () => {
   }
 
   try {
-    const { data, status } = await axiosInstance.get(`${API_URL}/api/account/me`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
+    const { data, status } = await axiosInstance.get(
+      `${API_URL}/api/account/me`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
       },
-    });
+    );
 
     if (status !== 200) {
       return null;
@@ -99,7 +102,7 @@ export const authProvider: AuthProvider = {
         success: false,
         error: {
           message: "Error de inicio de sesion",
-          name: "Debes ingresar el identificador y la contrasena.",
+          name: "Debes ingresar el identificador y la contraseña.",
         },
       };
     }
@@ -125,17 +128,20 @@ export const authProvider: AuthProvider = {
       success: false,
       error: {
         message: "Error de inicio de sesion",
-        name: "El identificador o la contrasena no son validos.",
+        name: "El identificador o la contraseña no son validos.",
       },
     };
   },
   register: async ({ email, password }) => {
     try {
-      const { data, status } = await axiosInstance.post(API_URL + "/api/auth/local/register", {
-        username: email,
-        email,
-        password,
-      });
+      const { data, status } = await axiosInstance.post(
+        API_URL + "/api/auth/local/register",
+        {
+          username: email,
+          email,
+          password,
+        },
+      );
 
       if (status === 200) {
         localStorage.setItem(TOKEN_KEY, data.jwt);
@@ -153,7 +159,9 @@ export const authProvider: AuthProvider = {
         success: false,
         error: {
           message: "Error de registro",
-          name: error.response?.data?.error?.message || "Los datos de registro no son validos.",
+          name:
+            error.response?.data?.error?.message ||
+            "Los datos de registro no son validos.",
         },
       };
     }
@@ -168,7 +176,10 @@ export const authProvider: AuthProvider = {
   logout: async () => {
     clearBrowserSession();
 
-    if (typeof window !== "undefined" && window.location.pathname !== LOGIN_ROUTE) {
+    if (
+      typeof window !== "undefined" &&
+      window.location.pathname !== LOGIN_ROUTE
+    ) {
       window.location.replace(LOGIN_ROUTE);
     }
 
@@ -221,7 +232,8 @@ export const authProvider: AuthProvider = {
       return null;
     }
 
-    const { id, username, email, NombreCompleto, UnidadPrivada, role } = account;
+    const { id, username, email, NombreCompleto, UnidadPrivada, role } =
+      account;
 
     return {
       id,

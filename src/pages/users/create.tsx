@@ -4,6 +4,8 @@ import { App as AntdApp, Form } from "antd";
 import { PageIntro } from "../../components";
 import { UserForm, type UserFormValues } from "./form";
 
+const DEFAULT_RESIDENT_ROLE_ID = 1;
+
 export const UserCreate = () => {
   const [form] = Form.useForm<UserFormValues>();
   const { message } = AntdApp.useApp();
@@ -19,6 +21,7 @@ export const UserCreate = () => {
         ...values,
         UnidadPrivada: normalizedUnit,
         username: normalizedUnit,
+        role: DEFAULT_RESIDENT_ROLE_ID,
       },
     });
 

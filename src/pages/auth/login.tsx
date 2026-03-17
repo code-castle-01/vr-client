@@ -110,18 +110,18 @@ export const LoginPage = () => {
                     </Form.Item>
 
                     <Form.Item
-                      label="Contrasena"
+                      label="contraseña"
                       name="password"
                       rules={[
                         {
                           required: true,
-                          message: "Ingresa tu contrasena.",
+                          message: "Ingresa tu contraseña.",
                         },
                       ]}
                     >
                       <Input.Password
                         autoComplete="current-password"
-                        placeholder="Ingresa tu contrasena"
+                        placeholder="Ingresa tu contraseña"
                         size="large"
                       />
                     </Form.Item>
