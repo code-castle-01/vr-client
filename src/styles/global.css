@@ -1272,6 +1272,26 @@ body {
   gap: 12px;
 }
 
+.vr-document-pdf-pages {
+  display: grid;
+  gap: 14px;
+}
+
+.vr-document-pdf-page {
+  margin: 0;
+  overflow: hidden;
+  border: 1px solid rgba(139, 76, 22, 0.12);
+  border-radius: 18px;
+  background: #ffffff;
+  box-shadow: 0 12px 26px rgba(23, 35, 47, 0.08);
+}
+
+.vr-document-pdf-page img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
 .vr-proxy-preview-image-shell {
   display: grid;
   place-items: center;

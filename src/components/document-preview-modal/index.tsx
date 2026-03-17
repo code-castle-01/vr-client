@@ -7,6 +7,8 @@ import {
   FileTextOutlined,
 } from "@ant-design/icons";
 import { Alert, Button, Empty, Modal, Space, Spin, Typography } from "antd";
+import { GlobalWorkerOptions, getDocument } from "pdfjs-dist";
+import pdfWorkerUrl from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 import { useEffect, useState } from "react";
 import { useDeviceLayout } from "../../utils/device-mode";
 
@@ -31,8 +33,20 @@ export type MeetingDocumentRecord = {
 };
 
 const { Paragraph, Text } = Typography;
+const PDF_RENDER_SCALE_DESKTOP = 1.65;
+const PDF_RENDER_SCALE_MOBILE = 2;
 
-export const buildMeetingDocumentUrl = (baseUrl: string, url?: string | null) => {
+GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
+
+type PdfPreviewPage = {
+  pageNumber: number;
+  src: string;
+};
+
+export const buildMeetingDocumentUrl = (
+  baseUrl: string,
+  url?: string | null,
+) => {
   if (!url) {
     return null;
   }
@@ -98,26 +112,29 @@ export const DocumentPreviewModal = ({
   onClose,
   open,
 }: DocumentPreviewModalProps) => {
-  const fileUrl = document ? buildMeetingDocumentUrl(baseUrl, document.file?.url) : null;
+  const fileUrl = document
+    ? buildMeetingDocumentUrl(baseUrl, document.file?.url)
+    : null;
   const kind = document ? getMeetingDocumentKind(document) : "file";
   const { isMobileLayout } = useDeviceLayout();
-  const [pdfPreviewUrl, setPdfPreviewUrl] = useState<string | null>(null);
+  const [pdfPreviewPages, setPdfPreviewPages] = useState<PdfPreviewPage[]>([]);
   const [pdfPreviewError, setPdfPreviewError] = useState<string | null>(null);
   const [isLoadingPdf, setIsLoadingPdf] = useState(false);
 
   useEffect(() => {
     if (!open || !document || kind !== "pdf" || !fileUrl) {
-      setPdfPreviewUrl(null);
+      setPdfPreviewPages([]);
       setPdfPreviewError(null);
       setIsLoadingPdf(false);
       return;
     }
 
     const controller = new AbortController();
-    let nextObjectUrl: string | null = null;
+    const nextObjectUrls: string[] = [];
 
     const loadPdfPreview = async () => {
       setIsLoadingPdf(true);
+      setPdfPreviewPages([]);
       setPdfPreviewError(null);
 
       try {
@@ -129,14 +146,53 @@ export const DocumentPreviewModal = ({
           throw new Error("No pudimos obtener el PDF para visualizarlo.");
         }
 
-        const blob = await response.blob();
-        nextObjectUrl = URL.createObjectURL(
-          blob.type === "application/pdf"
-            ? blob
-            : new Blob([await blob.arrayBuffer()], { type: "application/pdf" }),
-        );
+        const pdfData = await response.arrayBuffer();
+        const pdf = await getDocument({ data: pdfData }).promise;
+        const renderedPages: PdfPreviewPage[] = [];
 
-        setPdfPreviewUrl(nextObjectUrl);
+        for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber += 1) {
+          if (controller.signal.aborted) {
+            return;
+          }
+
+          const page = await pdf.getPage(pageNumber);
+          const viewport = page.getViewport({
+            scale: isMobileLayout
+              ? PDF_RENDER_SCALE_MOBILE
+              : PDF_RENDER_SCALE_DESKTOP,
+          });
+          const canvas = document.createElement("canvas");
+          const context = canvas.getContext("2d");
+
+          if (!context) {
+            throw new Error("No pudimos preparar el visor del documento.");
+          }
+
+          canvas.width = Math.ceil(viewport.width);
+          canvas.height = Math.ceil(viewport.height);
+
+          await page.render({
+            canvasContext: context,
+            viewport,
+          }).promise;
+
+          const imageBlob = await new Promise<Blob | null>((resolve) => {
+            canvas.toBlob(resolve, "image/png");
+          });
+
+          if (!imageBlob) {
+            throw new Error("No pudimos renderizar una pagina del PDF.");
+          }
+
+          const pageUrl = URL.createObjectURL(imageBlob);
+          nextObjectUrls.push(pageUrl);
+          renderedPages.push({
+            pageNumber,
+            src: pageUrl,
+          });
+        }
+
+        setPdfPreviewPages(renderedPages);
       } catch (error) {
         if (controller.signal.aborted) {
           return;
@@ -159,15 +215,17 @@ export const DocumentPreviewModal = ({
     return () => {
       controller.abort();
 
-      if (nextObjectUrl) {
-        URL.revokeObjectURL(nextObjectUrl);
-      }
+      nextObjectUrls.forEach((pageUrl) => URL.revokeObjectURL(pageUrl));
     };
-  }, [document, fileUrl, kind, open]);
+  }, [document, fileUrl, isMobileLayout, kind, open]);
 
   return (
     <Modal
-      className={isMobileLayout ? "vr-document-modal vr-document-modal--mobile" : "vr-document-modal"}
+      className={
+        isMobileLayout
+          ? "vr-document-modal vr-document-modal--mobile"
+          : "vr-document-modal"
+      }
       destroyOnClose
       open={open}
       title={document?.title ?? "Documento"}
@@ -207,21 +265,29 @@ export const DocumentPreviewModal = ({
             <Spin size="large" />
             <Text type="secondary">Preparando vista previa del PDF...</Text>
           </div>
-        ) : pdfPreviewUrl ? (
+        ) : pdfPreviewPages.length > 0 ? (
           <div className="vr-document-preview-frame-shell">
-            {isMobileLayout ? (
+            <Space direction="vertical" size={12} style={{ width: "100%" }}>
               <Alert
                 showIcon
                 type="info"
                 message="Visualizacion dentro de la app"
-                description="Si el PDF no se ve bien en tu navegador, puedes abrirlo en otra pestaña o descargarlo desde los botones del modal."
+                description={`El documento se renderizo dentro del modal. Paginas cargadas: ${pdfPreviewPages.length}.`}
               />
-            ) : null}
-            <iframe
-              title={document.title}
-              src={pdfPreviewUrl}
-              className={`vr-proxy-preview-frame${isMobileLayout ? " vr-proxy-preview-frame--mobile" : ""}`}
-            />
+              <div className="vr-document-pdf-pages">
+                {pdfPreviewPages.map((page) => (
+                  <figure
+                    key={page.pageNumber}
+                    className="vr-document-pdf-page"
+                  >
+                    <img
+                      src={page.src}
+                      alt={`${document.title} - pagina ${page.pageNumber}`}
+                    />
+                  </figure>
+                ))}
+              </div>
+            </Space>
           </div>
         ) : (
           <div className="vr-document-preview-fallback">
@@ -263,19 +329,30 @@ export const DocumentPreviewModal = ({
         )
       ) : kind === "image" ? (
         <div className="vr-proxy-preview-image-shell">
-          <img src={fileUrl} alt={document.title} className="vr-proxy-preview-image" />
+          <img
+            src={fileUrl}
+            alt={document.title}
+            className="vr-proxy-preview-image"
+          />
         </div>
       ) : (
         <div className="vr-document-preview-fallback">
-          <div className="vr-document-preview-fallback__icon">{getFallbackIcon(kind)}</div>
+          <div className="vr-document-preview-fallback__icon">
+            {getFallbackIcon(kind)}
+          </div>
           <Space direction="vertical" size={8} style={{ width: "100%" }}>
             <Text strong>{document.file?.name ?? document.title}</Text>
             <Paragraph type="secondary" style={{ marginBottom: 0 }}>
-              Este tipo de archivo no se puede previsualizar dentro del navegador,
-              pero ya está disponible para abrir o descargar.
+              Este tipo de archivo no se puede previsualizar dentro del
+              navegador, pero ya está disponible para abrir o descargar.
             </Paragraph>
             <Space wrap>
-              <Button icon={<EyeOutlined />} href={fileUrl} target="_blank" rel="noreferrer">
+              <Button
+                icon={<EyeOutlined />}
+                href={fileUrl}
+                target="_blank"
+                rel="noreferrer"
+              >
                 Abrir archivo
               </Button>
               <Button
