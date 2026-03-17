@@ -8,6 +8,7 @@ import {
 } from "@ant-design/icons";
 import { Alert, Button, Empty, Modal, Space, Spin, Typography } from "antd";
 import { useEffect, useState } from "react";
+import { useDeviceLayout } from "../../utils/device-mode";
 
 export type MeetingDocumentRecord = {
   createdAt?: string | null;
@@ -99,16 +100,13 @@ export const DocumentPreviewModal = ({
 }: DocumentPreviewModalProps) => {
   const fileUrl = document ? buildMeetingDocumentUrl(baseUrl, document.file?.url) : null;
   const kind = document ? getMeetingDocumentKind(document) : "file";
-  const isMobileViewport =
-    typeof window !== "undefined"
-      ? window.matchMedia("(max-width: 768px)").matches
-      : false;
+  const { isMobileLayout } = useDeviceLayout();
   const [pdfPreviewUrl, setPdfPreviewUrl] = useState<string | null>(null);
   const [pdfPreviewError, setPdfPreviewError] = useState<string | null>(null);
   const [isLoadingPdf, setIsLoadingPdf] = useState(false);
 
   useEffect(() => {
-    if (!open || !document || kind !== "pdf" || !fileUrl || isMobileViewport) {
+    if (!open || !document || kind !== "pdf" || !fileUrl || isMobileLayout) {
       setPdfPreviewUrl(null);
       setPdfPreviewError(null);
       setIsLoadingPdf(false);
@@ -165,7 +163,7 @@ export const DocumentPreviewModal = ({
         URL.revokeObjectURL(nextObjectUrl);
       }
     };
-  }, [document, fileUrl, isMobileViewport, kind, open]);
+  }, [document, fileUrl, isMobileLayout, kind, open]);
 
   return (
     <Modal
@@ -198,7 +196,7 @@ export const DocumentPreviewModal = ({
       {!document || !fileUrl ? (
         <Empty description="No encontramos un archivo para visualizar." />
       ) : kind === "pdf" ? (
-        isMobileViewport ? (
+        isMobileLayout ? (
           <div className="vr-document-preview-fallback">
             <div className="vr-document-preview-fallback__icon">
               <FilePdfOutlined />

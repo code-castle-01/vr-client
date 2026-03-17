@@ -13,6 +13,7 @@ import {
   Typography,
 } from "antd";
 import { SafetyCertificateOutlined, TeamOutlined } from "@ant-design/icons";
+import { useDeviceLayout } from "../../utils/device-mode";
 
 type LoginFormValues = {
   identifier: string;
@@ -22,6 +23,7 @@ type LoginFormValues = {
 export const LoginPage = () => {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const { mutateAsync: login, isPending } = useLogin<LoginFormValues>();
+  const { isMobileLayout } = useDeviceLayout();
 
   const handleSubmit = async (values: LoginFormValues) => {
     setErrorMessage(null);
@@ -46,7 +48,7 @@ export const LoginPage = () => {
           className="vr-auth-card"
         >
           <Row gutter={0}>
-            <Col xs={24} lg={12}>
+            <Col xs={24} lg={isMobileLayout ? 24 : 12}>
               <div className="vr-auth-brand">
                 <div className="vr-auth-brand-media">
                   <video
@@ -64,7 +66,7 @@ export const LoginPage = () => {
               </div>
             </Col>
 
-            <Col xs={24} lg={12}>
+            <Col xs={24} lg={isMobileLayout ? 24 : 12}>
               <div className="vr-auth-form-wrap">
                 <Space direction="vertical" size={20} style={{ width: "100%" }}>
                   <div className="vr-auth-badge">

@@ -1,3 +1,5 @@
+import { useEffect, useState } from "react";
+
 const MOBILE_VIEWPORT_MAX = 991;
 const COMPACT_VIEWPORT_MAX = 575;
 const HANDHELD_SCREEN_MAX = 1024;
@@ -82,5 +84,46 @@ export const initializeDeviceMode = () => {
   return () => {
     window.removeEventListener("resize", handleViewportChange);
     window.removeEventListener("orientationchange", handleViewportChange);
+  };
+};
+
+export const getClientLayoutMode = (): LayoutMode => {
+  if (typeof window === "undefined") {
+    return "desktop";
+  }
+
+  return getLayoutMode();
+};
+
+export const useDeviceLayout = () => {
+  const [layoutMode, setLayoutMode] = useState<LayoutMode>(() =>
+    getClientLayoutMode(),
+  );
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return undefined;
+    }
+
+    const handleViewportChange = () => {
+      setLayoutMode(getLayoutMode());
+    };
+
+    handleViewportChange();
+
+    window.addEventListener("resize", handleViewportChange, { passive: true });
+    window.addEventListener("orientationchange", handleViewportChange, {
+      passive: true,
+    });
+
+    return () => {
+      window.removeEventListener("resize", handleViewportChange);
+      window.removeEventListener("orientationchange", handleViewportChange);
+    };
+  }, []);
+
+  return {
+    isMobileLayout: layoutMode === "mobile",
+    layoutMode,
   };
 };

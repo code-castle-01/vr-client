@@ -14,7 +14,6 @@ import {
 import {
   Button,
   Drawer,
-  Grid,
   Layout,
   Menu,
   theme,
@@ -22,6 +21,7 @@ import {
 } from "antd";
 import React from "react";
 import { Link } from "react-router";
+import { useDeviceLayout } from "../../utils/device-mode";
 
 type AppSiderProps = {
   Title?: React.ComponentType<{
@@ -59,7 +59,6 @@ const buildMenuItems = (tree: TreeMenuItem[]): MenuProps["items"] =>
 
 export const AppSider = ({ Title, fixed = false, meta }: AppSiderProps) => {
   const { token } = theme.useToken();
-  const breakpoint = Grid.useBreakpoint();
   const {
     mobileSiderOpen,
     setMobileSiderOpen,
@@ -69,9 +68,7 @@ export const AppSider = ({ Title, fixed = false, meta }: AppSiderProps) => {
   const { warnWhen, setWarnWhen } = useWarnAboutChange();
   const translate = useTranslate();
   const isAuthenticated = useIsExistAuthentication();
-
-  const isMobile =
-    typeof breakpoint.lg === "undefined" ? false : !breakpoint.lg;
+  const { isMobileLayout } = useDeviceLayout();
 
   const titleNode = Title ? <Title collapsed={false} /> : null;
   const items = buildMenuItems(menuItems);
@@ -118,7 +115,7 @@ export const AppSider = ({ Title, fixed = false, meta }: AppSiderProps) => {
           handleLogout();
         }
 
-        if (isMobile) {
+        if (isMobileLayout) {
           setMobileSiderOpen(false);
         }
       }}
@@ -131,7 +128,7 @@ export const AppSider = ({ Title, fixed = false, meta }: AppSiderProps) => {
     />
   );
 
-  if (isMobile) {
+  if (isMobileLayout) {
     return (
       <>
         <Drawer
