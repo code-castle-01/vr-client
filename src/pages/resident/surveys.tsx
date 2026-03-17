@@ -17,6 +17,7 @@ import {
   Tag,
   Typography,
 } from "antd";
+import { useState } from "react";
 import type { SurveyModel } from "survey-core";
 import { BrandedSurvey } from "../../components";
 import { API_URL } from "../../constants";
@@ -70,6 +71,7 @@ type BallotResponse = {
 
 export const ResidentSurveysPage = () => {
   const { message } = AntdApp.useApp();
+  const [submittingAgendaItemId, setSubmittingAgendaItemId] = useState<number | null>(null);
   const ballotQuery = useCustom<BallotResponse>({
     url: `${API_URL}/api/votes/ballot`,
     method: "get",
@@ -81,19 +83,30 @@ export const ResidentSurveysPage = () => {
     ballot?.surveys.filter((survey) => !survey.existingVote) ?? [];
   const answeredSurveys =
     ballot?.surveys.filter((survey) => Boolean(survey.existingVote)) ?? [];
+  const isVoteSubmitting = submittingAgendaItemId !== null;
 
   const handleVote = async (agendaItemId: number, voteOptionIds: number[]) => {
-    await castVote.mutateAsync({
-      url: `${API_URL}/api/votes/cast`,
-      method: "post",
-      values: {
-        agendaItemId,
-        voteOptionIds,
-      },
-    });
+    if (isVoteSubmitting) {
+      throw new Error("Ya estamos registrando un voto. Espera un momento.");
+    }
 
-    message.success("Tu voto fue registrado correctamente.");
-    ballotQuery.query.refetch();
+    setSubmittingAgendaItemId(agendaItemId);
+
+    try {
+      await castVote.mutateAsync({
+        url: `${API_URL}/api/votes/cast`,
+        method: "post",
+        values: {
+          agendaItemId,
+          voteOptionIds,
+        },
+      });
+
+      message.success("Tu voto fue registrado correctamente.");
+      void ballotQuery.query.refetch();
+    } finally {
+      setSubmittingAgendaItemId(null);
+    }
   };
 
   if (ballot?.delegatedBy) {
@@ -196,6 +209,12 @@ export const ResidentSurveysPage = () => {
                     />
                   ) : (
                     <BrandedSurvey
+                      busyMessage={
+                        submittingAgendaItemId === survey.id
+                          ? "Registrando voto..."
+                          : "Espera a que termine el envio actual."
+                      }
+                      isSubmitting={isVoteSubmitting}
                       schema={buildVotingSurveySchema({
                         title: survey.title,
                         description:
@@ -224,7 +243,7 @@ export const ResidentSurveysPage = () => {
                     />
                   )}
 
-                  {castVote.mutation.isPending ? (
+                  {submittingAgendaItemId === survey.id ? (
                     <Typography.Text type="secondary">
                       Registrando voto...
                     </Typography.Text>

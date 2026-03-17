@@ -1422,6 +1422,7 @@ body {
 }
 
 .vr-survey-host {
+  position: relative;
   overflow: hidden;
   border: 12 solid rgba(139, 76, 22, 0.12);
   border-radius: 28px;
@@ -1436,6 +1437,25 @@ body {
       rgba(255, 249, 238, 0.98) 100%
     );
   box-shadow: 0 24px 48px rgba(23, 35, 47, 0.08);
+}
+
+.vr-survey-host--busy {
+  pointer-events: none;
+}
+
+.vr-survey-host__busy {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  display: grid;
+  place-content: center;
+  gap: 12px;
+  padding: 24px;
+  text-align: center;
+  color: var(--vr-ink);
+  font-weight: 800;
+  background: rgba(255, 249, 238, 0.84);
+  backdrop-filter: blur(6px);
 }
 
 .vr-survey-host .sd-root-modern,

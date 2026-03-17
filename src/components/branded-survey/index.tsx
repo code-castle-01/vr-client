@@ -1,3 +1,4 @@
+import { Spin } from "antd";
 import { useEffect, useEffectEvent, useMemo } from "react";
 import { Survey } from "survey-react-ui";
 import type { SurveyModel } from "survey-core";
@@ -7,7 +8,9 @@ import {
 } from "../../survey";
 
 type BrandedSurveyProps = {
+  busyMessage?: string;
   className?: string;
+  isSubmitting?: boolean;
   locale?: string | null;
   onComplete?: (model: SurveyModel) => Promise<void>;
   readOnly?: boolean;
@@ -16,7 +19,9 @@ type BrandedSurveyProps = {
 };
 
 export const BrandedSurvey = ({
+  busyMessage = "Registrando voto...",
   className,
+  isSubmitting = false,
   locale,
   onComplete,
   readOnly = false,
@@ -45,6 +50,11 @@ export const BrandedSurvey = ({
   });
 
   useEffect(() => {
+    model.mode = readOnly || isSubmitting ? "display" : "edit";
+    model.showCompleteButton = showCompleteButton && !readOnly && !isSubmitting;
+  }, [isSubmitting, model, readOnly, showCompleteButton]);
+
+  useEffect(() => {
     if (!onComplete) {
       return;
     }
@@ -69,7 +79,22 @@ export const BrandedSurvey = ({
   }, [handleComplete, model, onComplete]);
 
   return (
-    <div className={["vr-survey-host", className].filter(Boolean).join(" ")}>
+    <div
+      aria-busy={isSubmitting}
+      className={[
+        "vr-survey-host",
+        isSubmitting ? "vr-survey-host--busy" : null,
+        className,
+      ]
+        .filter(Boolean)
+        .join(" ")}
+    >
+      {isSubmitting ? (
+        <div className="vr-survey-host__busy" role="status">
+          <Spin size="large" />
+          <span>{busyMessage}</span>
+        </div>
+      ) : null}
       <Survey model={model} />
     </div>
   );
