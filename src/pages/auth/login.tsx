@@ -186,12 +186,12 @@ export const LoginPage = () => {
                       Ingreso a la asamblea
                     </Typography.Title>
                     <Typography.Paragraph className="vr-auth-panel-copy">
-                      Si es residentes entrar como <b>PROPIETARIO</b> y su
+                      Si es <i>residente</i> entrar como <b>PROPIETARIO</b> y su
                       unidad.
                     </Typography.Paragraph>
                     <Typography.Paragraph className="vr-auth-panel-copy">
-                      Si viene a representar como <b>APODERADO</b> entrar con la
-                      unidad a representar.
+                      Si viene a <i>representar</i> como <b>APODERADO</b> entrar
+                      con la unidad a representar.
                     </Typography.Paragraph>
                     <Typography.Paragraph className="vr-auth-panel-copy">
                       El <i>ADMINISTRADOR</i> gestiona usuarios, asambleas y
