@@ -6,14 +6,17 @@ import {
   TeamOutlined,
 } from "@ant-design/icons";
 import { DateField, Show, TextField } from "@refinedev/antd";
-import { useCustom, useShow } from "@refinedev/core";
+import { useCustom, useCustomMutation, useShow } from "@refinedev/core";
 import {
+  App as AntdApp,
   Alert,
   Button,
   Card,
   Col,
   Collapse,
   Empty,
+  Form,
+  Input,
   List,
   Modal,
   Row,
@@ -50,6 +53,14 @@ type AdminProxyResponse = {
       name: string;
       unit?: string | null;
     } | null;
+    revokedAt?: string | null;
+    revokedBy?: {
+      coefficient?: number | null;
+      id: number;
+      name: string;
+      unit?: string | null;
+    } | null;
+    revokedReason?: string | null;
     status?: string | null;
     submittedBy?: {
       coefficient?: number | null;
@@ -65,6 +76,7 @@ type AdminProxyResponse = {
     quorumReached: boolean;
     representedHomesCount: number;
     representativesCount: number;
+    revokedHomesCount?: number;
     supportsCount: number;
     totalHomesBase: number;
   } | null;
@@ -76,6 +88,11 @@ type PreviewDocument = {
   mime?: string | null;
   name?: string | null;
   url: string;
+};
+
+type PreviewState = {
+  document: PreviewDocument;
+  item: ProxyItem;
 };
 
 type RepresentativeGroup = {
@@ -107,9 +124,12 @@ const isPdfDocument = (document?: PreviewDocument | null) => {
 };
 
 export const AssemblyShow = () => {
+  const { message } = AntdApp.useApp();
+  const [revokeForm] = Form.useForm<{ reason: string }>();
   const { query } = useShow({});
   const { data, isLoading } = query;
-  const [previewDocument, setPreviewDocument] = useState<PreviewDocument | null>(null);
+  const [previewState, setPreviewState] = useState<PreviewState | null>(null);
+  const [revokeTarget, setRevokeTarget] = useState<ProxyItem | null>(null);
 
   const record = data?.data;
   const proxyQuery = useCustom<AdminProxyResponse>({
@@ -119,16 +139,23 @@ export const AssemblyShow = () => {
       enabled: Boolean(record?.id),
     },
   });
+  const revokeMutation = useCustomMutation({
+    mutationOptions: {
+      onError: () => undefined,
+    },
+  });
 
   const proxySummary = proxyQuery.query.data?.data?.summary;
   const proxyItems = proxyQuery.query.data?.data?.items ?? [];
+  const activeProxyItems = proxyItems.filter((item) => item.status !== "revoked");
+  const revokedProxyItems = proxyItems.filter((item) => item.status === "revoked");
   const quorumProgressLabel = `${proxySummary?.enabledHomesCount ?? 0} / ${
     proxySummary?.totalHomesBase ?? 0
   }`;
   const representativeGroups = useMemo<RepresentativeGroup[]>(() => {
     const groups = new Map<number | string, RepresentativeGroup>();
 
-    proxyItems.forEach((item) => {
+    activeProxyItems.forEach((item) => {
       if (!item.submittedBy) {
         return;
       }
@@ -161,14 +188,62 @@ export const AssemblyShow = () => {
         `${right.representative.unit ?? ""}${right.representative.name}`,
       ),
     );
-  }, [proxyItems]);
+  }, [activeProxyItems]);
+
+  const openRevokeModal = (item: ProxyItem) => {
+    setRevokeTarget(item);
+    revokeForm.setFieldsValue({
+      reason: item.revokedReason ?? "",
+    });
+  };
+
+  const closeRevokeModal = () => {
+    setRevokeTarget(null);
+    revokeForm.resetFields();
+  };
+
+  const handleRevoke = async () => {
+    if (!revokeTarget) {
+      return;
+    }
+
+    try {
+      const values = await revokeForm.validateFields();
+      await revokeMutation.mutateAsync({
+        url: `${API_URL}/api/proxy-authorizations/admin/${revokeTarget.id}/revoke`,
+        method: "post",
+        values,
+        errorNotification: false,
+        successNotification: false,
+      });
+      closeRevokeModal();
+      setPreviewState(null);
+      await proxyQuery.query.refetch();
+      message.success("El poder fue revocado y la representación quedó actualizada.");
+    } catch (error) {
+      if (
+        typeof error === "object" &&
+        error !== null &&
+        "errorFields" in error &&
+        Array.isArray((error as { errorFields?: unknown[] }).errorFields)
+      ) {
+        return;
+      }
+
+      message.error(
+        typeof error === "object" && error !== null && "message" in error
+          ? String(error.message)
+          : "No fue posible revocar el poder.",
+      );
+    }
+  };
 
   return (
     <>
       <PageIntro
         kicker="Asamblea"
         title={record?.title ?? "Detalle de asamblea"}
-        description="Consulta la fecha de ejecucion, el estado operativo y los poderes activos registrados para esta asamblea."
+        description="Consulta la fecha de ejecucion, el estado operativo, los poderes activos y las revocaciones registradas para esta asamblea."
       />
       <Show isLoading={isLoading} title="Detalle de asamblea">
         <Row gutter={[16, 16]}>
@@ -200,11 +275,14 @@ export const AssemblyShow = () => {
             <Card
               className="vr-section-card"
               loading={proxyQuery.query.isLoading}
-              title="Poderes activos"
+              title="Poderes registrados"
               extra={
                 <Space wrap>
                   <Tag color="blue" icon={<TeamOutlined />}>
                     {proxySummary?.representedHomesCount ?? 0} representados
+                  </Tag>
+                  <Tag color="red">
+                    {proxySummary?.revokedHomesCount ?? 0} revocados
                   </Tag>
                   <Tag color={proxySummary?.quorumReached ? "green" : "gold"}>
                     Quorum {quorumProgressLabel}
@@ -242,6 +320,12 @@ export const AssemblyShow = () => {
                   <div className="vr-summary-label">Soportes cargados</div>
                   <div className="vr-summary-value">
                     {proxySummary?.supportsCount ?? 0}
+                  </div>
+                </div>
+                <div className="vr-summary-card">
+                  <div className="vr-summary-label">Poderes revocados</div>
+                  <div className="vr-summary-value">
+                    {proxySummary?.revokedHomesCount ?? 0}
                   </div>
                 </div>
                 <div className="vr-summary-card">
@@ -325,7 +409,14 @@ export const AssemblyShow = () => {
                                         <FileImageOutlined />
                                       )
                                     }
-                                    onClick={() => setPreviewDocument(nextPreview)}
+                                    onClick={() =>
+                                      nextPreview
+                                        ? setPreviewState({
+                                            document: nextPreview,
+                                            item,
+                                          })
+                                        : undefined
+                                    }
                                   >
                                     Ver poder
                                   </Button>
@@ -359,6 +450,7 @@ export const AssemblyShow = () => {
                                     {item.representedResident?.name ?? "Sin registro"}
                                   </Title>
                                   <Space wrap>
+                                    <Tag color="green">Activo</Tag>
                                     <Tag color="gold">
                                       Coeficiente{" "}
                                       {Number(
@@ -397,28 +489,130 @@ export const AssemblyShow = () => {
                   description="Esta asamblea aun no tiene poderes activos registrados."
                 />
               )}
+
+              {revokedProxyItems.length > 0 ? (
+                <div style={{ marginTop: 24 }}>
+                  <Title level={4}>Poderes revocados</Title>
+                  <List
+                    className="vr-proxy-resident-list"
+                    dataSource={revokedProxyItems}
+                    renderItem={(item) => {
+                      const documentUrl = buildDocumentUrl(item.document?.url);
+                      const nextPreview =
+                        documentUrl
+                          ? {
+                              mime: item.document?.mime ?? null,
+                              name: item.document?.name ?? "Soporte",
+                              url: documentUrl,
+                            }
+                          : null;
+
+                      return (
+                        <List.Item
+                          className="vr-proxy-resident-item"
+                          actions={[
+                            documentUrl ? (
+                              <Button
+                                key={`preview-revoked-${item.id}`}
+                                type="link"
+                                icon={
+                                  isPdfDocument(nextPreview) ? (
+                                    <FilePdfOutlined />
+                                  ) : (
+                                    <FileImageOutlined />
+                                  )
+                                }
+                                onClick={() =>
+                                  nextPreview
+                                    ? setPreviewState({
+                                        document: nextPreview,
+                                        item,
+                                      })
+                                    : undefined
+                                }
+                              >
+                                Ver poder
+                              </Button>
+                            ) : (
+                              <Tag key={`missing-revoked-${item.id}`}>Sin soporte</Tag>
+                            ),
+                          ].filter(Boolean)}
+                        >
+                          <div className="vr-proxy-resident-card">
+                            <div className="vr-proxy-resident-main">
+                              <Text strong>
+                                {item.representedResident?.unit ?? "Sin unidad"}
+                              </Text>
+                              <Title level={5} style={{ margin: 0 }}>
+                                {item.representedResident?.name ?? "Sin registro"}
+                              </Title>
+                              <Space wrap>
+                                <Tag color="red">Revocado</Tag>
+                                {item.submittedBy?.unit ? (
+                                  <Tag color="processing">
+                                    Intentó representar: {item.submittedBy.unit}
+                                  </Tag>
+                                ) : null}
+                              </Space>
+                              <Paragraph style={{ marginBottom: 0, marginTop: 12 }}>
+                                <Text strong>Motivo:</Text>{" "}
+                                {item.revokedReason ?? "Sin observación registrada."}
+                              </Paragraph>
+                            </div>
+                            <div className="vr-proxy-resident-meta">
+                              <span>Revocación</span>
+                              {item.revokedAt ? (
+                                <DateField
+                                  value={item.revokedAt}
+                                  format="DD MMM YYYY - hh:mm A"
+                                />
+                              ) : (
+                                <Text type="secondary">Sin fecha</Text>
+                              )}
+                              {item.revokedBy?.name ? (
+                                <Text type="secondary">
+                                  Por {item.revokedBy.name}
+                                </Text>
+                              ) : null}
+                            </div>
+                          </div>
+                        </List.Item>
+                      );
+                    }}
+                  />
+                </div>
+              ) : null}
             </Card>
           </Col>
         </Row>
       </Show>
 
       <Modal
-        open={Boolean(previewDocument)}
-        title={previewDocument?.name ?? "Vista del poder"}
+        open={Boolean(previewState)}
+        title={previewState?.document.name ?? "Vista del poder"}
         width={960}
-        onCancel={() => setPreviewDocument(null)}
+        onCancel={() => setPreviewState(null)}
         footer={
-          previewDocument
+          previewState
             ? [
-                <Button key="close" onClick={() => setPreviewDocument(null)}>
+                previewState.item.status !== "revoked" ? (
+                  <Button
+                    key="revoke"
+                    danger
+                    onClick={() => openRevokeModal(previewState.item)}
+                  >
+                    Revocar poder
+                  </Button>
+                ) : null,
+                <Button key="close" onClick={() => setPreviewState(null)}>
                   Cerrar
                 </Button>,
                 <Button
                   key="download"
                   type="primary"
                   icon={<DownloadOutlined />}
-                  href={previewDocument.url}
-                  download={previewDocument.name ?? "poder"}
+                  href={previewState.document.url}
+                  download={previewState.document.name ?? "poder"}
                   target="_blank"
                   rel="noreferrer"
                 >
@@ -428,27 +622,89 @@ export const AssemblyShow = () => {
             : null
         }
       >
-        {previewDocument ? (
-          isPdfDocument(previewDocument) ? (
-            <iframe
-              title={previewDocument.name ?? "Vista previa del poder"}
-              src={previewDocument.url}
-              className="vr-proxy-preview-frame"
-            />
-          ) : (
-            <div className="vr-proxy-preview-image-shell">
-              <img
-                src={previewDocument.url}
-                alt={previewDocument.name ?? "Vista previa del poder"}
-                className="vr-proxy-preview-image"
+        {previewState ? (
+          <>
+            <Space direction="vertical" size={12} style={{ width: "100%", marginBottom: 16 }}>
+              <Space wrap>
+                <Tag color={previewState.item.status === "revoked" ? "red" : "green"}>
+                  {previewState.item.status === "revoked" ? "Revocado" : "Activo"}
+                </Tag>
+                {previewState.item.submittedBy?.unit ? (
+                  <Tag color="blue">
+                    Representante: {previewState.item.submittedBy.unit}
+                  </Tag>
+                ) : null}
+                {previewState.item.representedResident?.unit ? (
+                  <Tag color="gold">
+                    Unidad: {previewState.item.representedResident.unit}
+                  </Tag>
+                ) : null}
+              </Space>
+              {previewState.item.revokedReason ? (
+                <Alert
+                  type="warning"
+                  showIcon
+                  message="Este poder fue revocado"
+                  description={previewState.item.revokedReason}
+                />
+              ) : null}
+            </Space>
+            {isPdfDocument(previewState.document) ? (
+              <iframe
+                title={previewState.document.name ?? "Vista previa del poder"}
+                src={previewState.document.url}
+                className="vr-proxy-preview-frame"
               />
-            </div>
-          )
+            ) : (
+              <div className="vr-proxy-preview-image-shell">
+                <img
+                  src={previewState.document.url}
+                  alt={previewState.document.name ?? "Vista previa del poder"}
+                  className="vr-proxy-preview-image"
+                />
+              </div>
+            )}
+          </>
         ) : (
           <Paragraph type="secondary" style={{ marginBottom: 0 }}>
             Selecciona un poder para visualizarlo.
           </Paragraph>
         )}
+      </Modal>
+
+      <Modal
+        open={Boolean(revokeTarget)}
+        title="Revocar poder"
+        okText="Confirmar revocación"
+        cancelText="Cancelar"
+        confirmLoading={revokeMutation.mutation.isPending}
+        onOk={handleRevoke}
+        onCancel={closeRevokeModal}
+      >
+        <Form form={revokeForm} layout="vertical" requiredMark={false}>
+          <Paragraph>
+            Explica por qué se revoca este poder. La observación quedará visible
+            para el administrador, la unidad representada y quien intentó
+            representarla.
+          </Paragraph>
+          <Form.Item
+            label="Motivo de revocación"
+            name="reason"
+            rules={[
+              {
+                required: true,
+                message: "Debes explicar por qué se revoca este poder.",
+              },
+            ]}
+          >
+            <Input.TextArea
+              rows={4}
+              maxLength={800}
+              placeholder="Ejemplo: el documento no está firmado o los datos de la unidad no coinciden."
+              showCount
+            />
+          </Form.Item>
+        </Form>
       </Modal>
     </>
   );

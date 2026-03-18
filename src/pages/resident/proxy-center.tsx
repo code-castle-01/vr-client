@@ -50,10 +50,37 @@ type DeclarationSummary = {
   unit: string | null;
 };
 
+type RevokedDeclarationSummary = {
+  declarationId: number;
+  registeredAt?: string | null;
+  representedResident?: {
+    coefficient?: number | null;
+    id: number;
+    name: string;
+    unit: string | null;
+  } | null;
+  revokedAt?: string | null;
+  revokedBy?: {
+    coefficient?: number | null;
+    id: number;
+    name: string;
+    unit: string | null;
+  } | null;
+  revokedReason?: string | null;
+  status: "revoked";
+  submittedBy?: {
+    coefficient?: number | null;
+    id: number;
+    name: string;
+    unit: string | null;
+  } | null;
+};
+
 type ProxySummary = {
   accessMode: "owner" | "proxy";
   canManageDeclarations: boolean;
   canProceedToSurveys: boolean;
+  canSubmitDeclarations: boolean;
   hasCastVotes: boolean;
   delegatedBy?: {
     id: number;
@@ -74,6 +101,10 @@ type ProxySummary = {
   };
   representationLocked: boolean;
   representedResidents: DeclarationSummary[];
+  revocationHistory: {
+    incoming: RevokedDeclarationSummary[];
+    outgoing: RevokedDeclarationSummary[];
+  };
   totalHomesRepresented: number;
   totalWeightRepresented: number;
 };
@@ -202,12 +233,35 @@ export const ProxyCenterPage = () => {
   });
   const summary = summaryQuery.query.data?.data;
   const accessMode = summary?.accessMode ?? identity?.accessMode ?? "owner";
+  const hasOutgoingRevocations = Boolean(summary?.revocationHistory.outgoing.length);
+  const hasIncomingRevocations = Boolean(summary?.revocationHistory.incoming.length);
+  const ownerAvailableSlots = summary
+    ? Math.max(0, 2 - summary.representedResidents.length)
+    : 0;
+  const proxyAvailableExtraSlots = summary
+    ? Math.max(0, 1 - summary.representedResidents.length)
+    : 0;
+  const shouldRenderProxyBaseForm = Boolean(
+    summary?.accessMode === "proxy" && !summary.proxySelfAuthorization.uploaded,
+  );
+  const declarationSlotCount = summary
+    ? summary.accessMode === "owner"
+      ? ownerAvailableSlots
+      : proxyAvailableExtraSlots
+    : 0;
   const ownerIntro =
     accessMode === "owner" &&
     !summary?.hasDeclarations &&
     !summary?.representationLocked &&
     !summary?.hasCastVotes &&
+    !hasOutgoingRevocations &&
     !editingOwner;
+  const ownerReplacementIntro =
+    accessMode === "owner" &&
+    !editingOwner &&
+    Boolean(summary?.canSubmitDeclarations) &&
+    ownerAvailableSlots > 0 &&
+    (summary?.hasDeclarations || hasOutgoingRevocations);
 
   const residentsQuery = useCustom<ResidentOption[]>({
     url: `${API_URL}/api/proxy-authorizations/available-residents`,
@@ -215,9 +269,10 @@ export const ProxyCenterPage = () => {
     queryOptions: {
       enabled:
         !summary?.delegatedBy &&
+        Boolean(summary?.canSubmitDeclarations) &&
         (accessMode === "proxy"
-          ? !summary?.proxySelfAuthorization.uploaded
-          : editingOwner),
+          ? declarationSlotCount > 0
+          : editingOwner || hasOutgoingRevocations),
     },
   });
 
@@ -279,15 +334,17 @@ export const ProxyCenterPage = () => {
     if (summary.accessMode === "proxy") {
       const selfFile = values.selfSupport?.[0]?.originFileObj as File | undefined;
 
-      if (!selfFile) {
+      if (!summary.proxySelfAuthorization.uploaded && !selfFile) {
         message.error("Adjunta el poder base de la unidad con la que ingresaste.");
         return;
       }
 
-      declarations.push({
-        representedUserId: summary.principal.id,
-        file: selfFile,
-      });
+      if (selfFile) {
+        declarations.push({
+          representedUserId: summary.principal.id,
+          file: selfFile,
+        });
+      }
 
       const extra = values.declarations?.[0];
       const extraFile = extra?.support?.[0]?.originFileObj as File | undefined;
@@ -379,10 +436,10 @@ export const ProxyCenterPage = () => {
   const showForm =
     !summary?.delegatedBy &&
     summary &&
-    summary.canManageDeclarations &&
-    (summary.accessMode === "proxy"
-      ? !summary.proxySelfAuthorization.uploaded
-      : editingOwner);
+    summary.canSubmitDeclarations &&
+    ((summary.accessMode === "proxy" &&
+      (shouldRenderProxyBaseForm || declarationSlotCount > 0)) ||
+      (summary.accessMode === "owner" && (editingOwner || hasOutgoingRevocations)));
 
   return (
     <Space direction="vertical" size={20} style={{ width: "100%" }}>
@@ -416,6 +473,59 @@ export const ProxyCenterPage = () => {
         />
       ) : null}
 
+      {hasOutgoingRevocations ? (
+        <Card className="vr-section-card">
+          <Space direction="vertical" size={12} style={{ width: "100%" }}>
+            <Tag color="red">Poderes revocados por revisión administrativa</Tag>
+            {summary?.revocationHistory.outgoing.map((entry) => (
+              <Alert
+                key={`outgoing-${entry.declarationId}`}
+                type="warning"
+                showIcon
+                message={`Se revocó el poder sobre ${entry.representedResident?.unit ?? "una unidad"}`}
+                description={
+                  <>
+                    <div>{entry.revokedReason ?? "Sin observación registrada."}</div>
+                    {entry.revokedBy?.name ? (
+                      <div style={{ marginTop: 8 }}>
+                        Revisado por {entry.revokedBy.name}.
+                      </div>
+                    ) : null}
+                  </>
+                }
+              />
+            ))}
+          </Space>
+        </Card>
+      ) : null}
+
+      {hasIncomingRevocations ? (
+        <Card className="vr-section-card">
+          <Space direction="vertical" size={12} style={{ width: "100%" }}>
+            <Tag color="blue">Tu unidad quedó libre nuevamente</Tag>
+            {summary?.revocationHistory.incoming.map((entry) => (
+              <Alert
+                key={`incoming-${entry.declarationId}`}
+                type="info"
+                showIcon
+                message={`Se revocó un poder que intentaba representar a ${summary.principal.unit ?? "tu unidad"}`}
+                description={
+                  <>
+                    <div>{entry.revokedReason ?? "Sin observación registrada."}</div>
+                    {entry.submittedBy?.name ? (
+                      <div style={{ marginTop: 8 }}>
+                        El intento de representación lo había hecho {entry.submittedBy.name} (
+                        {entry.submittedBy.unit ?? "sin unidad"}).
+                      </div>
+                    ) : null}
+                  </>
+                }
+              />
+            ))}
+          </Space>
+        </Card>
+      ) : null}
+
       {summary?.hasDeclarations ? (
         <Card className="vr-section-card">
           <Result
@@ -426,6 +536,14 @@ export const ProxyCenterPage = () => {
             extra={[
               <div key="summary" style={{ margin: "0 auto", maxWidth: 720, textAlign: "left" }}>
                 <Space direction="vertical" size={12} style={{ width: "100%" }}>
+                  {hasOutgoingRevocations ? (
+                    <Alert
+                      type="warning"
+                      showIcon
+                      message="Tienes observaciones pendientes en algunos poderes"
+                      description="Los poderes revocados ya no cuentan en tus votos ni en tu coeficiente. Si corresponde, puedes volver a cargarlos con el documento corregido."
+                    />
+                  ) : null}
                   {summary.proxySelfAuthorization.declaration ? (
                     <DeclarationCard
                       canManage={summary.canManageDeclarations}
@@ -500,6 +618,25 @@ export const ProxyCenterPage = () => {
         </Card>
       ) : null}
 
+      {ownerReplacementIntro ? (
+        <Card className="vr-section-card">
+          <Result
+            status="warning"
+            title="Puedes completar o corregir tus poderes"
+            subTitle={
+              hasOutgoingRevocations
+                ? "Uno o más poderes fueron revocados por revisión. Si tienes el soporte correcto, vuelve a cargarlo para recuperar esa representación."
+                : "Aún tienes espacio disponible para sumar más poderes antes de cerrar tu participación."
+            }
+            extra={
+              <Button type="primary" size="large" onClick={() => setEditingOwner(true)}>
+                {hasOutgoingRevocations ? "Cargar poder corregido" : "Agregar poderes"}
+              </Button>
+            }
+          />
+        </Card>
+      ) : null}
+
       {summary && accessMode === "owner" && summary.representationLocked && !summary.hasDeclarations ? (
         <Card className="vr-section-card">
           <Result
@@ -521,13 +658,11 @@ export const ProxyCenterPage = () => {
 
       {showForm ? (
         <Form<ProxyFormValues>
-          key={summary.accessMode}
+          key={`${summary.accessMode}-${declarationSlotCount}-${shouldRenderProxyBaseForm ? "base" : "nobase"}`}
           form={form}
           layout="vertical"
           initialValues={{
-            declarations: Array.from({ length: summary.accessMode === "owner" ? 2 : 1 }).map(
-              () => ({}),
-            ),
+            declarations: Array.from({ length: declarationSlotCount }).map(() => ({})),
           }}
           onFinish={handleSubmit}
           requiredMark={false}
@@ -543,8 +678,8 @@ export const ProxyCenterPage = () => {
                       </Typography.Title>
                       <Typography.Paragraph type="secondary" style={{ marginBottom: 0 }}>
                         {summary.accessMode === "proxy"
-                          ? "Adjunta tu poder base y, si aplica, una unidad adicional."
-                          : "Registra hasta dos poderes con su soporte."}
+                          ? "Adjunta el soporte que te haga falta para dejar completa tu representación."
+                          : "Registra solo los poderes que aún te faltan por cargar."}
                       </Typography.Paragraph>
                     </div>
                     {summary.accessMode === "owner" ? (
@@ -554,7 +689,7 @@ export const ProxyCenterPage = () => {
                     ) : null}
                   </Space>
 
-                  {summary.accessMode === "proxy" ? (
+                  {shouldRenderProxyBaseForm ? (
                     <Card size="small" style={{ borderRadius: 20 }}>
                       <Typography.Text strong>{summary.principal.unit ?? "Sin unidad"}</Typography.Text>
                       <br />
@@ -571,7 +706,7 @@ export const ProxyCenterPage = () => {
                     </Card>
                   ) : null}
 
-                  {Array.from({ length: summary.accessMode === "owner" ? 2 : 1 }).map((_, index) => (
+                  {Array.from({ length: declarationSlotCount }).map((_, index) => (
                     <Card key={index} size="small" style={{ borderRadius: 20 }}>
                       <Row gutter={[16, 0]}>
                         <Col xs={24} md={12}>

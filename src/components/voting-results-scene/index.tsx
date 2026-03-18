@@ -142,7 +142,8 @@ const formatDate = (value: string | null) =>
 const formatExportDate = (value: string | null) =>
   value ? dayjs(value).format("DD/MM/YYYY HH:mm") : "Sin fecha";
 
-const sanitizePdfText = (value: string) => value.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+const sanitizePdfText = (value: string) =>
+  value.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 
 const buildResultsExportRows = (assemblies: AssemblyResult[]) =>
   assemblies.flatMap((assembly) =>
@@ -155,7 +156,9 @@ const buildResultsExportRows = (assemblies: AssemblyResult[]) =>
         pregunta: survey.questionTitle,
         seccion: survey.sectionTitle ?? "",
         estadoEncuesta: surveyStatusMap[survey.status].label,
-        mayoria: survey.requiresSpecialMajority ? "Mayoría 70%" : "Mayoría simple",
+        mayoria: survey.requiresSpecialMajority
+          ? "Mayoría 70%"
+          : "Mayoría simple",
         opcion: option.text,
         opcionGanadora: option.isWinner ? "Si" : "No",
         participantes: survey.summary.totalVotes,
@@ -179,7 +182,8 @@ const resultStateMap: Record<
   },
   closed_without_threshold: {
     color: "warning",
-    description: "La encuesta cerró sin alcanzar la mayoría especial requerida.",
+    description:
+      "La encuesta cerró sin alcanzar la mayoría especial requerida.",
     title: "Sin mayoría requerida",
   },
   leading: {
@@ -246,7 +250,20 @@ const SurveyResultCard = ({ survey }: { survey: SurveyResult }) => {
     survey.surveyTitle.trim() !== survey.questionTitle.trim();
 
   return (
-    <Card className="vr-results-survey-card" size="small">
+    <Card
+      className="vr-results-survey-card"
+      size="small"
+      variant="borderless"
+      style={{
+        marginTop: "1rem",
+        border: "1px solid #bf7a24",
+        padding: 8,
+        justifyContent: "space-between",
+        display: "flex",
+        alignItems: "center",
+        widows: "100%",
+      }}
+    >
       <Space direction="vertical" size={18} style={{ width: "100%" }}>
         <div className="vr-results-survey-head">
           <div className="vr-results-question-shell">
@@ -276,7 +293,9 @@ const SurveyResultCard = ({ survey }: { survey: SurveyResult }) => {
 
             <div className="vr-results-question-meta">
               <span>{survey.summary.totalVotes} votos emitidos</span>
-              <span>Peso acumulado {formatWeight(survey.summary.totalWeight)}</span>
+              <span>
+                Peso acumulado {formatWeight(survey.summary.totalWeight)}
+              </span>
               <span>{survey.summary.totalOptions} opciones evaluadas</span>
             </div>
           </div>
@@ -286,7 +305,9 @@ const SurveyResultCard = ({ survey }: { survey: SurveyResult }) => {
               {surveyStatusMap[survey.status].label}
             </Tag>
             <Tag color={survey.requiresSpecialMajority ? "volcano" : "green"}>
-              {survey.requiresSpecialMajority ? "Mayoría 70%" : "Mayoría simple"}
+              {survey.requiresSpecialMajority
+                ? "Mayoría 70%"
+                : "Mayoría simple"}
             </Tag>
           </Space>
         </div>
@@ -298,10 +319,10 @@ const SurveyResultCard = ({ survey }: { survey: SurveyResult }) => {
             state.color === "success"
               ? "success"
               : state.color === "processing"
-                ? "info"
-                : state.color === "warning"
-                  ? "warning"
-                  : "info"
+              ? "info"
+              : state.color === "warning"
+              ? "warning"
+              : "info"
           }
           message={state.title}
           description={state.description}
@@ -326,7 +347,9 @@ const SurveyResultCard = ({ survey }: { survey: SurveyResult }) => {
                 </div>
                 <div className="vr-results-leader-meta">
                   {survey.winningOption
-                    ? `${survey.winningOption.totalVotes} votos · peso ${formatWeight(
+                    ? `${
+                        survey.winningOption.totalVotes
+                      } votos · peso ${formatWeight(
                         survey.winningOption.totalWeight,
                       )}`
                     : "Esperando participación"}
@@ -347,11 +370,16 @@ const SurveyResultCard = ({ survey }: { survey: SurveyResult }) => {
                   >
                     <div className="vr-results-option-top">
                       <div className="vr-results-option-name">
-                        {option.isWinner ? <TrophyOutlined /> : <BarChartOutlined />}
+                        {option.isWinner ? (
+                          <TrophyOutlined />
+                        ) : (
+                          <BarChartOutlined />
+                        )}
                         <span>{option.text}</span>
                       </div>
                       <div className="vr-results-option-metrics">
-                        {option.totalVotes} votos · {formatWeight(option.totalWeight)}
+                        {option.totalVotes} votos ·{" "}
+                        {formatWeight(option.totalWeight)}
                       </div>
                     </div>
 
@@ -364,7 +392,9 @@ const SurveyResultCard = ({ survey }: { survey: SurveyResult }) => {
 
                     <div className="vr-results-option-bottom">
                       <span>Peso {option.shareByWeight.toFixed(1)}%</span>
-                      <span>Participación {option.shareByVotes.toFixed(1)}%</span>
+                      <span>
+                        Participación {option.shareByVotes.toFixed(1)}%
+                      </span>
                     </div>
                   </div>
                 ))
@@ -382,9 +412,7 @@ const SurveyResultCard = ({ survey }: { survey: SurveyResult }) => {
   );
 };
 
-export const VotingResultsScene = ({
-  audience,
-}: VotingResultsSceneProps) => {
+export const VotingResultsScene = ({ audience }: VotingResultsSceneProps) => {
   const { message } = AntdApp.useApp();
   const [filter, setFilter] = useState<"all" | "closed" | "open">(
     audience === "admin" ? "all" : "open",
@@ -425,7 +453,8 @@ export const VotingResultsScene = ({
       ballot.surveys
         .filter((survey) => Boolean(survey.existingVote))
         .map((survey) => {
-          const selectedOptionIds = survey.existingVote?.selectedOptionIds ?? [];
+          const selectedOptionIds =
+            survey.existingVote?.selectedOptionIds ?? [];
           const selectedOptions = survey.options.filter((option) =>
             selectedOptionIds.includes(option.id),
           );
@@ -473,7 +502,9 @@ export const VotingResultsScene = ({
     return filteredAssemblies
       .map((assembly) => ({
         ...assembly,
-        surveys: assembly.surveys.filter((survey) => answeredSurveysById.has(survey.id)),
+        surveys: assembly.surveys.filter((survey) =>
+          answeredSurveysById.has(survey.id),
+        ),
       }))
       .filter((assembly) => assembly.surveys.length > 0);
   }, [audience, answeredSurveysById, filteredAssemblies]);
@@ -483,15 +514,17 @@ export const VotingResultsScene = ({
   );
 
   const title =
-    audience === "admin" ? "Centro de resultados de votación" : "Panorama de resultados";
+    audience === "admin"
+      ? "Centro de resultados de votación"
+      : "Panorama de resultados";
   const description =
     audience === "admin"
       ? "Monitorea cada encuesta con una sola lectura agregada del backend. Aquí ves participación, peso acumulado y la opción que va ganando sin saturar el servidor."
       : "Consulta cómo va cada votación desde una vista ligera y preparada para móvil. Los resultados se entregan resumidos para evitar cargas innecesarias durante la asamblea.";
 
-  const fileStamp = dayjs(overview?.generatedAt ?? new Date().toISOString()).format(
-    "YYYYMMDD-HHmm",
-  );
+  const fileStamp = dayjs(
+    overview?.generatedAt ?? new Date().toISOString(),
+  ).format("YYYYMMDD-HHmm");
   const filterLabel =
     filter === "all" ? "todas" : filter === "open" ? "abiertas" : "cerradas";
 
@@ -557,17 +590,19 @@ export const VotingResultsScene = ({
 
       autoTable(document, {
         startY: 80,
-        head: [[
-          "Asamblea",
-          "Pregunta",
-          "Seccion",
-          "Opcion",
-          "Ganadora",
-          "Participantes",
-          "Peso",
-          "Votos opcion",
-          "Peso opcion",
-        ]],
+        head: [
+          [
+            "Asamblea",
+            "Pregunta",
+            "Seccion",
+            "Opcion",
+            "Ganadora",
+            "Participantes",
+            "Peso",
+            "Votos opcion",
+            "Peso opcion",
+          ],
+        ],
         body: exportRows.map((row) => [
           String(row.asamblea),
           String(row.pregunta),
@@ -605,7 +640,9 @@ export const VotingResultsScene = ({
 
   const handleExportResidentPdf = async () => {
     if (!overview || !ballot) {
-      message.warning("Aun estamos cargando tus resultados. Intenta nuevamente.");
+      message.warning(
+        "Aun estamos cargando tus resultados. Intenta nuevamente.",
+      );
       return;
     }
 
@@ -615,7 +652,9 @@ export const VotingResultsScene = ({
     }
 
     if (!residentExportAssemblies.length) {
-      message.warning("No tienes encuestas respondidas dentro del filtro actual.");
+      message.warning(
+        "No tienes encuestas respondidas dentro del filtro actual.",
+      );
       return;
     }
 
@@ -645,7 +684,9 @@ export const VotingResultsScene = ({
       document.setTextColor(91, 102, 114);
       document.text(
         sanitizePdfText(
-          `Filtro: ${filterLabel} | Generado: ${formatExportDate(overview.generatedAt)}`,
+          `Filtro: ${filterLabel} | Generado: ${formatExportDate(
+            overview.generatedAt,
+          )}`,
         ),
         40,
         cursorY,
@@ -675,7 +716,9 @@ export const VotingResultsScene = ({
         document.setTextColor(91, 102, 114);
         document.text(
           sanitizePdfText(
-            `${formatExportDate(assembly.date)} · ${assembly.surveys.length} preguntas respondidas`,
+            `${formatExportDate(assembly.date)} · ${
+              assembly.surveys.length
+            } preguntas respondidas`,
           ),
           48,
           cursorY + 18,
@@ -701,13 +744,22 @@ export const VotingResultsScene = ({
 
           document.setFontSize(9);
           document.setTextColor(191, 122, 45);
-          document.text(sanitizePdfText(`Pregunta ${surveyIndex + 1}`), 48, cursorY + 8);
+          document.text(
+            sanitizePdfText(`Pregunta ${surveyIndex + 1}`),
+            48,
+            cursorY + 8,
+          );
 
           document.setFontSize(14);
           document.setTextColor(24, 48, 66);
-          document.text(sanitizePdfText(survey.questionTitle), 48, cursorY + 28, {
-            maxWidth: 355,
-          });
+          document.text(
+            sanitizePdfText(survey.questionTitle),
+            48,
+            cursorY + 28,
+            {
+              maxWidth: 355,
+            },
+          );
 
           document.setFontSize(9);
           document.setTextColor(91, 102, 114);
@@ -735,10 +787,7 @@ export const VotingResultsScene = ({
 
           autoTable(document, {
             body: [
-              [
-                "Tu respuesta",
-                sanitizePdfText(response.responseLabel),
-              ],
+              ["Tu respuesta", sanitizePdfText(response.responseLabel)],
               [
                 "Estado actual",
                 sanitizePdfText(
@@ -758,7 +807,9 @@ export const VotingResultsScene = ({
               [
                 "Tipo de mayoria",
                 sanitizePdfText(
-                  survey.requiresSpecialMajority ? "Mayoría 70%" : "Mayoría simple",
+                  survey.requiresSpecialMajority
+                    ? "Mayoría 70%"
+                    : "Mayoría simple",
                 ),
               ],
             ],
@@ -788,7 +839,9 @@ export const VotingResultsScene = ({
         }
       });
 
-      document.save(`mis-resultados-respondidos-${filterLabel}-${fileStamp}.pdf`);
+      document.save(
+        `mis-resultados-respondidos-${filterLabel}-${fileStamp}.pdf`,
+      );
       message.success("Tu PDF personal fue generado correctamente.");
     } catch (error) {
       message.error(
@@ -970,9 +1023,12 @@ export const VotingResultsScene = ({
             label: (
               <div className="vr-results-assembly-header">
                 <div>
-                  <div className="vr-results-assembly-title">{assembly.title}</div>
+                  <div className="vr-results-assembly-title">
+                    {assembly.title}
+                  </div>
                   <div className="vr-results-assembly-meta">
-                    {formatDate(assembly.date)} · {assembly.summary.totalVotes} votos
+                    {formatDate(assembly.date)} · {assembly.summary.totalVotes}{" "}
+                    votos
                   </div>
                 </div>
 

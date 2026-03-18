@@ -1,3 +1,8 @@
+import {
+  CheckCircleOutlined,
+  SearchOutlined,
+  StopOutlined,
+} from "@ant-design/icons";
 import { EditButton, List, useTable } from "@refinedev/antd";
 import { useUpdate } from "@refinedev/core";
 import {
@@ -10,11 +15,6 @@ import {
   Tag,
   Typography,
 } from "antd";
-import {
-  CheckCircleOutlined,
-  SearchOutlined,
-  StopOutlined,
-} from "@ant-design/icons";
 import { useEffect, useMemo, useState } from "react";
 import { PageIntro } from "../../components";
 
@@ -194,7 +194,7 @@ export const UserList = () => {
                 selectedKeys,
                 setSelectedKeys,
               }) => (
-                <div style={{ padding: 8, width: 280 }}>
+                <section style={{ padding: 8, width: 280 }}>
                   <Space
                     direction="vertical"
                     size={8}
@@ -242,7 +242,7 @@ export const UserList = () => {
                       </Button>
                     </Space>
                   </Space>
-                </div>
+                </section>
               )}
               filterIcon={(filtered) => (
                 <SearchOutlined
@@ -290,11 +290,6 @@ export const UserList = () => {
                   </Typography.Text>
                 </div>
               )}
-            />
-            <Table.Column<UserRecord>
-              dataIndex="email"
-              title="Correo"
-              sorter={(left, right) => compareText(left.email, right.email)}
             />
             <Table.Column<UserRecord>
               dataIndex="Coeficiente"
