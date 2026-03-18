@@ -190,8 +190,8 @@ export const LoginPage = () => {
                       unidad.
                     </Typography.Paragraph>
                     <Typography.Paragraph className="vr-auth-panel-copy">
-                      Si es viene a representar como <b>APODERADO</b> entrar con
-                      la unidad a representar.
+                      Si viene a representar como <b>APODERADO</b> entrar con la
+                      unidad a representar.
                     </Typography.Paragraph>
                     <Typography.Paragraph className="vr-auth-panel-copy">
                       El <i>ADMINISTRADOR</i> gestiona usuarios, asambleas y
