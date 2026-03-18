@@ -4,6 +4,8 @@ export type UserRole = {
   type?: string | null;
 } | null;
 
+export type ResidentAccessMode = "owner" | "proxy" | null;
+
 const ADMIN_ROLES = new Set([
   "admin",
   "administrador",

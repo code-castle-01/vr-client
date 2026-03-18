@@ -8,6 +8,7 @@ import {
 import { DateField, Show, TextField } from "@refinedev/antd";
 import { useCustom, useShow } from "@refinedev/core";
 import {
+  Alert,
   Button,
   Card,
   Col,
@@ -58,9 +59,14 @@ type AdminProxyResponse = {
     } | null;
   }>;
   summary?: {
+    enabledHomesCount: number;
+    loggedUsersCount: number;
+    quorumMinHomes: number;
+    quorumReached: boolean;
     representedHomesCount: number;
     representativesCount: number;
     supportsCount: number;
+    totalHomesBase: number;
   } | null;
 };
 
@@ -116,6 +122,9 @@ export const AssemblyShow = () => {
 
   const proxySummary = proxyQuery.query.data?.data?.summary;
   const proxyItems = proxyQuery.query.data?.data?.items ?? [];
+  const quorumProgressLabel = `${proxySummary?.enabledHomesCount ?? 0} / ${
+    proxySummary?.totalHomesBase ?? 0
+  }`;
   const representativeGroups = useMemo<RepresentativeGroup[]>(() => {
     const groups = new Map<number | string, RepresentativeGroup>();
 
@@ -193,11 +202,29 @@ export const AssemblyShow = () => {
               loading={proxyQuery.query.isLoading}
               title="Poderes activos"
               extra={
-                <Tag color="blue" icon={<TeamOutlined />}>
-                  {proxySummary?.representedHomesCount ?? 0} representados
-                </Tag>
+                <Space wrap>
+                  <Tag color="blue" icon={<TeamOutlined />}>
+                    {proxySummary?.representedHomesCount ?? 0} representados
+                  </Tag>
+                  <Tag color={proxySummary?.quorumReached ? "green" : "gold"}>
+                    Quorum {quorumProgressLabel}
+                  </Tag>
+                </Space>
               }
             >
+              <Alert
+                type={proxySummary?.quorumReached ? "success" : "info"}
+                showIcon
+                style={{ marginBottom: 16 }}
+                message={
+                  proxySummary?.quorumReached
+                    ? "El quorum minimo ya fue alcanzado."
+                    : "El quorum aun esta en construccion."
+                }
+                description={`Casas habilitadas ${quorumProgressLabel}. Minimo requerido: ${
+                  proxySummary?.quorumMinHomes ?? 150
+                }.`}
+              />
               <div className="vr-summary-grid">
                 <div className="vr-summary-card">
                   <div className="vr-summary-label">Representantes</div>
@@ -215,6 +242,25 @@ export const AssemblyShow = () => {
                   <div className="vr-summary-label">Soportes cargados</div>
                   <div className="vr-summary-value">
                     {proxySummary?.supportsCount ?? 0}
+                  </div>
+                </div>
+                <div className="vr-summary-card">
+                  <div className="vr-summary-label">Usuarios con ingreso</div>
+                  <div className="vr-summary-value">
+                    {proxySummary?.loggedUsersCount ?? 0}
+                  </div>
+                </div>
+                <div className="vr-summary-card">
+                  <div className="vr-summary-label">Casas habilitadas</div>
+                  <div className="vr-summary-value">
+                    {proxySummary?.enabledHomesCount ?? 0}
+                  </div>
+                </div>
+                <div className="vr-summary-card">
+                  <div className="vr-summary-label">Quorum objetivo</div>
+                  <div className="vr-summary-value">
+                    {proxySummary?.quorumMinHomes ?? 150} /{" "}
+                    {proxySummary?.totalHomesBase ?? 0}
                   </div>
                 </div>
               </div>
@@ -239,7 +285,7 @@ export const AssemblyShow = () => {
                             <span>Residentes representados</span>
                           </div>
                           <div className="vr-proxy-metric-chip">
-                            <strong>{group.totalCoefficient.toFixed(2)}</strong>
+                            <strong>{group.totalCoefficient.toFixed(6)}</strong>
                             <span>Coeficiente acumulado</span>
                           </div>
                           <div className="vr-proxy-metric-chip">
@@ -317,7 +363,7 @@ export const AssemblyShow = () => {
                                       Coeficiente{" "}
                                       {Number(
                                         item.representedResident?.coefficient ?? 0,
-                                      ).toFixed(2)}
+                                      ).toFixed(6)}
                                     </Tag>
                                     {item.document?.name ? (
                                       <Tag color="processing">

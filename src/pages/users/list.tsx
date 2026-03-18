@@ -302,7 +302,7 @@ export const UserList = () => {
               sorter={(left, right) =>
                 Number(left.Coeficiente ?? 0) - Number(right.Coeficiente ?? 0)
               }
-              render={(value) => Number(value ?? 0).toFixed(2)}
+              render={(value) => Number(value ?? 0).toFixed(6)}
             />
             <Table.Column<UserRecord>
               dataIndex="EstadoCartera"

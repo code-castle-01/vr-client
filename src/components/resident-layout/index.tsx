@@ -130,11 +130,11 @@ export const ResidentLayout = () => {
             <NavLink to="/encuestas" className={getNavClassName}>
               Encuestas
             </NavLink>
-            <NavLink to="/documentos" className={getNavClassName}>
-              Documentos
-            </NavLink>
             <NavLink to="/mis-resultados" className={getNavClassName}>
               Resultados
+            </NavLink>
+            <NavLink to="/documentos" className={getNavClassName}>
+              Documentos
             </NavLink>
           </div>
 

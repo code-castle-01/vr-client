@@ -1,5 +1,5 @@
 import type { FormInstance } from "antd";
-import { Card, Col, Form, Input, InputNumber, Row, Switch } from "antd";
+import { Card, Col, Form, Input, InputNumber, Row, Switch, Typography } from "antd";
 
 export type UserFormValues = {
   Coeficiente: number;
@@ -8,7 +8,6 @@ export type UserFormValues = {
   UnidadPrivada: string;
   blocked: boolean;
   email: string;
-  password?: string;
   role?: number;
 };
 
@@ -47,6 +46,9 @@ export const UserForm = ({ form, isEdit, onFinish }: UserFormProps) => {
                 <Form.Item
                   label="Unidad privada"
                   name="UnidadPrivada"
+                  normalize={(value) =>
+                    typeof value === "string" ? value.toUpperCase() : value
+                  }
                   rules={[
                     { required: true, message: "Ingresa la unidad privada." },
                   ]}
@@ -72,38 +74,16 @@ export const UserForm = ({ form, isEdit, onFinish }: UserFormProps) => {
               </Col>
 
               <Col xs={24}>
-                <Form.Item
-                  label={isEdit ? "Nueva contraseña" : "contraseña inicial"}
-                  name="password"
-                  rules={
-                    isEdit
-                      ? [
-                          {
-                            min: 6,
-                            message:
-                              "La contraseña debe tener al menos 6 caracteres.",
-                          },
-                        ]
-                      : [
-                          {
-                            required: true,
-                            message: "Ingresa una contraseña temporal.",
-                          },
-                          {
-                            min: 6,
-                            message:
-                              "La contraseña debe tener al menos 6 caracteres.",
-                          },
-                        ]
-                  }
-                  extra={
-                    isEdit
-                      ? "Deja este campo vacio si no quieres cambiar la contraseña."
-                      : "El administrador puede compartir esta contraseña con el copropietario."
-                  }
-                >
-                  <Input.Password placeholder="Minimo 6 caracteres" />
-                </Form.Item>
+                <Card size="small" style={{ borderRadius: 18 }}>
+                  <Typography.Text strong>Acceso del residente</Typography.Text>
+                  <Typography.Paragraph type="secondary" style={{ marginBottom: 0, marginTop: 8 }}>
+                    {isEdit
+                      ? "Al guardar cambios, el sistema mantendrá la unidad privada como credencial interna del residente."
+                      : "El login del residente ya no usa contraseña visible. El sistema guardará internamente la misma unidad privada como credencial, por ejemplo "}
+                    {!isEdit ? <strong>M1-01</strong> : null}
+                    {!isEdit ? "." : null}
+                  </Typography.Paragraph>
+                </Card>
               </Col>
             </Row>
           </Card>
@@ -119,16 +99,17 @@ export const UserForm = ({ form, isEdit, onFinish }: UserFormProps) => {
                 <Form.Item
                   label="Coeficiente"
                   name="Coeficiente"
-                  initialValue={100}
+                  initialValue={0.003367}
                   rules={[
                     { required: true, message: "Ingresa el coeficiente." },
                   ]}
                 >
                   <InputNumber
                     min={0}
-                    precision={2}
+                    precision={6}
+                    step={0.000001}
                     style={{ width: "100%" }}
-                    placeholder="100"
+                    placeholder="0.003367"
                   />
                 </Form.Item>
               </Col>

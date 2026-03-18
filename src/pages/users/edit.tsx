@@ -36,7 +36,6 @@ export const UserEdit = () => {
       UnidadPrivada: record.UnidadPrivada,
       blocked: Boolean(record.blocked),
       email: record.email,
-      password: "",
     });
   }, [form, record]);
 
@@ -46,7 +45,6 @@ export const UserEdit = () => {
       ...values,
       UnidadPrivada: normalizedUnit,
       username: normalizedUnit,
-      password: values.password?.trim() ? values.password : undefined,
     };
 
     await mutateAsync({

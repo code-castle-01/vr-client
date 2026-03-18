@@ -27,11 +27,14 @@ import {
 } from "../../survey";
 
 type BallotResponse = {
+  accessMode: "owner" | "proxy";
+  canCastVotes: boolean;
   delegatedBy?: {
     id: number;
     name: string;
     unit: string | null;
   } | null;
+  proxySelfAuthorized: boolean;
   resident: {
     id: number;
     name: string;
@@ -68,6 +71,9 @@ type BallotResponse = {
   totalHomesRepresented: number;
   totalWeightRepresented: number;
 };
+
+const formatHomesLabel = (totalHomesRepresented: number) =>
+  `${totalHomesRepresented} ${totalHomesRepresented === 1 ? "casa" : "casas"}`;
 
 export const ResidentSurveysPage = () => {
   const { message } = AntdApp.useApp();
@@ -121,6 +127,23 @@ export const ResidentSurveysPage = () => {
     );
   }
 
+  if (ballot && !ballot.canCastVotes) {
+    return (
+      <Card className="vr-section-card">
+        <Result
+          status="warning"
+          title="Tu ingreso aún no está habilitado para votar"
+          subTitle="Como apoderado, primero debes adjuntar el poder de la unidad con la que ingresaste antes de continuar con las encuestas."
+          extra={
+            <Button href="/representacion" type="primary">
+              Ir a poderes
+            </Button>
+          }
+        />
+      </Card>
+    );
+  }
+
   return (
     <Space direction="vertical" size={20} style={{ width: "100%" }}>
       <div className="vr-page-intro" style={{ marginBottom: 0 }}>
@@ -141,11 +164,11 @@ export const ResidentSurveysPage = () => {
                 Capacidad de voto
               </Tag>
               <Typography.Title level={3} style={{ marginTop: 12, marginBottom: 4 }}>
-                {ballot.totalHomesRepresented} casas
+                {formatHomesLabel(ballot.totalHomesRepresented)}
               </Typography.Title>
               <Typography.Paragraph type="secondary" style={{ marginBottom: 0 }}>
                 Coeficiente acumulado:{" "}
-                <strong>{ballot.totalWeightRepresented.toFixed(2)}</strong>
+                <strong>{ballot.totalWeightRepresented.toFixed(6)}</strong>
               </Typography.Paragraph>
             </Card>
           </Col>
@@ -158,7 +181,9 @@ export const ResidentSurveysPage = () => {
                 {ballot.representedResidents.length}
               </Typography.Title>
               <Typography.Paragraph type="secondary" style={{ marginBottom: 0 }}>
-                Además de tu propia unidad.
+                {ballot.accessMode === "proxy"
+                  ? "Unidades adicionales aparte de tu poder base."
+                  : "Además de tu propia unidad."}
               </Typography.Paragraph>
             </Card>
           </Col>
@@ -287,7 +312,7 @@ export const ResidentSurveysPage = () => {
                       </Typography.Title>
                       <Typography.Text type="secondary">
                         Esta encuesta ya fue respondida con un peso de{" "}
-                        {survey.existingVote?.weight.toFixed(2)}.
+                        {survey.existingVote?.weight.toFixed(6)}.
                       </Typography.Text>
                     </div>
 

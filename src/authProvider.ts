@@ -1,9 +1,11 @@
 import type { AuthProvider } from "@refinedev/core";
 import axios from "axios";
 import { API_URL, TOKEN_KEY } from "./constants";
+import type { ResidentAccessMode } from "./auth-utils";
 
 export const axiosInstance = axios.create();
 const LOGIN_ROUTE = "/login";
+const normalizeUnit = (value?: string | null) => value?.trim().toUpperCase() ?? "";
 
 type CurrentAccount = {
   Coeficiente?: number | string | null;
@@ -12,6 +14,7 @@ type CurrentAccount = {
   UnidadPrivada?: string | null;
   email: string;
   id: number;
+  residentAccessMode?: ResidentAccessMode;
   role?: {
     id?: number;
     name?: string | null;
@@ -21,6 +24,16 @@ type CurrentAccount = {
 };
 
 type UpdateCurrentAccountNameResponse = CurrentAccount;
+
+type LoginParams = {
+  email?: string;
+  identifier?: string;
+  loginType?: "admin" | "resident";
+  password?: string;
+  residentAccessMode?: ResidentAccessMode;
+  unit?: string;
+  username?: string;
+};
 
 const clearBrowserSession = () => {
   delete axiosInstance.defaults.headers.common.Authorization;
@@ -94,41 +107,100 @@ export const updateCurrentAccountName = async (
 };
 
 export const authProvider: AuthProvider = {
-  login: async ({ email, password, identifier, username }) => {
-    const loginIdentifier = identifier ?? username ?? email;
+  login: async (params) => {
+    const {
+      email,
+      identifier,
+      loginType,
+      password,
+      residentAccessMode,
+      unit,
+      username,
+    } = params as LoginParams;
 
-    if (!loginIdentifier || !password) {
+    try {
+      if (loginType === "resident" || unit) {
+        const normalizedUnit = normalizeUnit(unit ?? identifier ?? username ?? email);
+
+        if (!normalizedUnit || !residentAccessMode) {
+          return {
+            success: false,
+            error: {
+              message: "Error de inicio de sesion",
+              name: "Debes ingresar la unidad y seleccionar propietario o apoderado.",
+            },
+          };
+        }
+
+        const { data, status } = await axios.post(
+          `${API_URL}/api/account/resident-login`,
+          {
+            residentAccessMode,
+            unit: normalizedUnit,
+          },
+        );
+
+        if (status === 200) {
+          localStorage.setItem(TOKEN_KEY, data.jwt);
+          axiosInstance.defaults.headers.common.Authorization = `Bearer ${data.jwt}`;
+
+          return {
+            success: true,
+            redirectTo: "/",
+          };
+        }
+      } else {
+        const loginIdentifier = identifier ?? username ?? email;
+
+        if (!loginIdentifier || !password) {
+          return {
+            success: false,
+            error: {
+              message: "Error de inicio de sesion",
+              name: "Debes ingresar el identificador y la contraseña.",
+            },
+          };
+        }
+
+        const { data, status } = await axios.post(`${API_URL}/api/auth/local`, {
+          identifier: loginIdentifier,
+          password,
+        });
+
+        if (status === 200) {
+          localStorage.setItem(TOKEN_KEY, data.jwt);
+          axiosInstance.defaults.headers.common.Authorization = `Bearer ${data.jwt}`;
+
+          return {
+            success: true,
+            redirectTo: "/",
+          };
+        }
+      }
+    } catch (error: unknown) {
+      const errorMessage =
+        axios.isAxiosError(error)
+          ? error.response?.data?.error?.message ||
+            error.response?.data?.message ||
+            error.message
+          : error instanceof Error
+            ? error.message
+            : "No fue posible iniciar sesion.";
+
       return {
         success: false,
         error: {
           message: "Error de inicio de sesion",
-          name: "Debes ingresar el identificador y la contraseña.",
+          name: errorMessage,
         },
       };
     }
 
-    const { data, status } = await axios.post(`${API_URL}/api/auth/local`, {
-      identifier: loginIdentifier,
-      password,
-    });
-    if (status === 200) {
-      localStorage.setItem(TOKEN_KEY, data.jwt);
-
-      // set header axios instance
-      axiosInstance.defaults.headers.common[
-        "Authorization"
-      ] = `Bearer ${data.jwt}`;
-
-      return {
-        success: true,
-        redirectTo: "/",
-      };
-    }
     return {
       success: false,
       error: {
         message: "Error de inicio de sesion",
-        name: "El identificador o la contraseña no son validos.",
+        name: "No fue posible iniciar sesion con los datos proporcionados.",
       },
     };
   },
@@ -236,6 +308,7 @@ export const authProvider: AuthProvider = {
       account;
 
     return {
+      accessMode: account.residentAccessMode ?? null,
       id,
       name: NombreCompleto ?? UnidadPrivada ?? username,
       email,
