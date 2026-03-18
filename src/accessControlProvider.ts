@@ -6,6 +6,7 @@ const ADMIN_RESOURCES = new Set([
   "users",
   "agenda-items",
   "assemblies",
+  "compliance-dashboard",
   "results-dashboard",
   "meeting-documents",
 ]);

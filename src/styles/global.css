@@ -508,6 +508,35 @@ body {
   line-height: 1.65;
 }
 
+.vr-auth-legal-block {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 18px;
+  padding: 16px 18px;
+  border: 12 solid rgba(139, 76, 22, 0.08);
+  border-radius: 20px;
+  background: rgba(255, 250, 242, 0.76);
+}
+
+.vr-auth-legal-checkbox {
+  margin-bottom: 0 !important;
+}
+
+.vr-auth-legal-checkbox .ant-checkbox-wrapper {
+  color: #4c3a26;
+  font-weight: 600;
+  line-height: 1.6;
+}
+
+.vr-auth-legal-link {
+  color: #8b4c16;
+  font-weight: 700;
+}
+
+.vr-auth-legal-link:hover {
+  color: #a85f1d;
+}
+
 .vr-logo-chip {
   width: 48px;
   height: 48px;
@@ -545,6 +574,44 @@ body {
   font-size: 28px;
   font-weight: 800;
   line-height: 1;
+}
+
+.vr-legal-stack {
+  display: grid;
+  gap: 16px;
+}
+
+.vr-legal-section {
+  padding: 18px 20px;
+  border: 12 solid rgba(139, 76, 22, 0.08);
+  border-radius: 22px;
+  background: rgba(255, 252, 246, 0.82);
+}
+
+.vr-legal-section h4 {
+  margin-bottom: 10px !important;
+  color: var(--vr-ink) !important;
+}
+
+.vr-legal-bullets {
+  margin: 0;
+  padding-left: 20px;
+  color: #5c4a33;
+}
+
+.vr-legal-bullets li + li {
+  margin-top: 8px;
+}
+
+.vr-compliance-filters {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+  align-items: end;
+}
+
+.vr-compliance-actions {
+  margin-bottom: 24px !important;
 }
 
 .vr-resident-shell {
@@ -1795,6 +1862,10 @@ body {
     grid-template-columns: 1fr;
   }
 
+  .vr-compliance-filters {
+    grid-template-columns: 1fr;
+  }
+
   .vr-resident-header {
     flex-direction: column;
     align-items: flex-start;
@@ -1962,6 +2033,10 @@ html[data-vr-layout="mobile"] .vr-auth-brand-video {
 }
 
 html[data-vr-layout="mobile"] .vr-summary-grid {
+  grid-template-columns: 1fr;
+}
+
+html[data-vr-layout="mobile"] .vr-compliance-filters {
   grid-template-columns: 1fr;
 }
 
@@ -2167,6 +2242,10 @@ html.vr-handheld .vr-auth-brand-media {
 
 html.vr-handheld .vr-auth-brand-video {
   aspect-ratio: 16 / 10;
+}
+
+html.vr-handheld .vr-compliance-filters {
+  grid-template-columns: 1fr;
 }
 
 html.vr-handheld .vr-resident-shell {

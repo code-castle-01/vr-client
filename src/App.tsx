@@ -6,6 +6,7 @@ import {
   BankOutlined,
   FileTextOutlined,
   LineChartOutlined,
+  SafetyCertificateOutlined,
   TeamOutlined,
 } from "@ant-design/icons";
 import {
@@ -38,6 +39,7 @@ import { API_URL, APP_NAME } from "./constants";
 import { ColorModeContextProvider } from "./contexts/color-mode";
 import { i18nProvider } from "./i18n";
 import { LoginPage } from "./pages/auth";
+import { ComplianceListPage } from "./pages/compliance";
 import {
   AgendaItemCreate,
   AgendaItemEdit,
@@ -51,6 +53,7 @@ import {
   AssemblyShow,
 } from "./pages/assemblies";
 import { AdminDocumentsPage, ResidentDocumentsPage } from "./pages/documents";
+import { ResidentLegalPage } from "./pages/legal";
 import { AdminResultsPage } from "./pages/results";
 import {
   ProxyCenterPage,
@@ -72,6 +75,7 @@ const formatDocumentTitle = ({
 }) => {
   const routeTitles: Array<[string, string]> = [
     ["/login", "Login"],
+    ["/politica-de-privacidad", "Politica"],
     ["/representacion", "Poderes"],
     ["/encuestas", "Encuestas"],
     ["/documentos", "Documentos"],
@@ -81,6 +85,7 @@ const formatDocumentTitle = ({
     ["/users", "Usuarios"],
     ["/archivos", "Archivos"],
     ["/resultados", "Resultados"],
+    ["/cumplimiento", "Cumplimiento"],
     ["/administracion", "Panel"],
   ];
 
@@ -174,6 +179,14 @@ function App() {
                       },
                     },
                     {
+                      name: "compliance-dashboard",
+                      list: "/cumplimiento",
+                      meta: {
+                        label: "Cumplimiento",
+                        icon: <SafetyCertificateOutlined />,
+                      },
+                    },
+                    {
                       name: "vote-options",
                       meta: {
                         hide: true,
@@ -191,6 +204,10 @@ function App() {
                   }}
                 >
                   <Routes>
+                    <Route
+                      path="/politica-de-privacidad"
+                      element={<ResidentLegalPage />}
+                    />
                     <Route
                       element={
                         <Authenticated
@@ -275,6 +292,18 @@ function App() {
                             }
                           />
                           <Route path="/resultados" element={<AdminResultsPage />} />
+                          <Route
+                            path="/cumplimiento"
+                            element={
+                              <CanAccess
+                                resource="compliance-dashboard"
+                                action="list"
+                                fallback={<ErrorComponent />}
+                              >
+                                <ComplianceListPage />
+                              </CanAccess>
+                            }
+                          />
                         </Route>
                       </Route>
                       <Route element={<ResidentOnly />}>

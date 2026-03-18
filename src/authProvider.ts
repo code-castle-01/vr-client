@@ -15,6 +15,12 @@ type CurrentAccount = {
   email: string;
   id: number;
   residentAccessMode?: ResidentAccessMode;
+  residentLegalAcceptance?: {
+    acceptedAt?: string | null;
+    acceptedVersion?: string | null;
+    currentVersion?: string | null;
+    requiresAcceptance?: boolean;
+  } | null;
   role?: {
     id?: number;
     name?: string | null;
@@ -28,6 +34,8 @@ type UpdateCurrentAccountNameResponse = CurrentAccount;
 type LoginParams = {
   email?: string;
   identifier?: string;
+  legalAccepted?: boolean;
+  legalVersion?: string;
   loginType?: "admin" | "resident";
   password?: string;
   residentAccessMode?: ResidentAccessMode;
@@ -111,6 +119,8 @@ export const authProvider: AuthProvider = {
     const {
       email,
       identifier,
+      legalAccepted,
+      legalVersion,
       loginType,
       password,
       residentAccessMode,
@@ -135,6 +145,8 @@ export const authProvider: AuthProvider = {
         const { data, status } = await axios.post(
           `${API_URL}/api/account/resident-login`,
           {
+            legalAccepted: legalAccepted === true,
+            legalVersion: legalVersion ?? null,
             residentAccessMode,
             unit: normalizedUnit,
           },
