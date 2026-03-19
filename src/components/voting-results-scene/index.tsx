@@ -146,6 +146,94 @@ type ResidentAnsweredSurvey = {
   selectedOptionIds: number[];
 };
 
+type ResidentHistoryResponse = {
+  assembly: {
+    date: string | null;
+    id: number;
+    status: "scheduled" | "in_progress" | "finished";
+    title: string;
+  } | null;
+  declarations: Array<{
+    id: number;
+    registeredAt: string | null;
+    representedResident: {
+      id: number;
+      name: string;
+      unit: string | null;
+    } | null;
+    revokedAt: string | null;
+    revokedBy: {
+      id: number;
+      name: string;
+      unit: string | null;
+    } | null;
+    revokedReason: string | null;
+    status: "submitted" | "revoked";
+    support: {
+      id: number;
+      mime: string | null;
+      name: string | null;
+      size: number;
+      url: string | null;
+    } | null;
+  }>;
+  legalAcceptance: {
+    acceptedAt: string | null;
+    documentHash: string | null;
+    documentKey: string | null;
+    documentVersion: string | null;
+    id: number;
+    ipAddress: string | null;
+    userAgent: string | null;
+  } | null;
+  participation: {
+    accessMode: "owner" | "proxy";
+    canCastVotes: boolean;
+    checkInTime: string | null;
+    delegatedBy: {
+      id: number;
+      name: string;
+      unit: string | null;
+    } | null;
+    hasCastVotes: boolean;
+    representationLocked: boolean;
+    representedResidents: Array<{
+      coefficient: number;
+      declarationId: number;
+      document: {
+        id: number;
+        mime: string | null;
+        name: string | null;
+        size: number;
+        url: string | null;
+      } | null;
+      id: number;
+      name: string;
+      unit: string | null;
+    }>;
+    totalHomesRepresented: number;
+    totalWeightRepresented: number;
+  } | null;
+  resident: {
+    id: number;
+    name: string;
+    unit: string | null;
+  };
+  votes: Array<{
+    agendaItemId: number;
+    agendaStatus: "pending" | "open" | "closed";
+    mechanism: string;
+    questionDescription: string | null;
+    questionTitle: string;
+    recordedAt: string | null;
+    sectionTitle: string | null;
+    selectedOptions: string[];
+    surveyTitle: string;
+    voteIds: number[];
+    weight: number;
+  }>;
+};
+
 const optionPalette = ["#c9822f", "#f0b64d", "#56708a", "#7b8da4", "#9da9b6"];
 
 const formatWeight = (value: number) => value.toFixed(2);
@@ -429,7 +517,7 @@ const SurveyResultCard = ({ survey }: { survey: SurveyResult }) => {
 export const VotingResultsScene = ({ audience }: VotingResultsSceneProps) => {
   const { message } = AntdApp.useApp();
   const [filter, setFilter] = useState<"all" | "closed" | "open">(
-    audience === "admin" ? "all" : "open",
+    audience === "admin" ? "all" : "closed",
   );
   const [exporting, setExporting] = useState<"excel" | "pdf" | null>(null);
   const recalculateWeights = useCustomMutation<RepairVoteWeightsResponse>();
@@ -455,9 +543,21 @@ export const VotingResultsScene = ({ audience }: VotingResultsSceneProps) => {
       staleTime: 30_000,
     },
   });
+  const residentHistoryQuery = useCustom<ResidentHistoryResponse>({
+    method: "get",
+    url: `${API_URL}/api/votes/resident-history`,
+    errorNotification: false,
+    queryOptions: {
+      enabled: audience === "resident",
+      refetchOnWindowFocus: false,
+      retry: 0,
+      staleTime: 30_000,
+    },
+  });
 
   const overview = overviewQuery.query.data?.data;
   const ballot = ballotQuery.query.data?.data;
+  const residentHistory = residentHistoryQuery.query.data?.data;
 
   const answeredSurveysById = useMemo(() => {
     if (audience !== "resident" || !ballot) {
@@ -527,6 +627,8 @@ export const VotingResultsScene = ({ audience }: VotingResultsSceneProps) => {
     () => buildResultsExportRows(filteredAssemblies),
     [filteredAssemblies],
   );
+  const residentHistoryVotes = residentHistory?.votes ?? [];
+  const residentHistoryDeclarations = residentHistory?.declarations ?? [];
 
   const title =
     audience === "admin"
@@ -535,7 +637,7 @@ export const VotingResultsScene = ({ audience }: VotingResultsSceneProps) => {
   const description =
     audience === "admin"
       ? "Monitorea cada encuesta con una sola lectura agregada del backend. Aquí ves participación, peso acumulado y la opción que va ganando sin saturar el servidor."
-      : "Consulta cómo va cada votación desde una vista ligera y preparada para móvil. Los resultados se entregan resumidos para evitar cargas innecesarias durante la asamblea.";
+      : "Revisa resultados finales y tu trazabilidad personal (votos, pesos y poderes) con la misma base de datos usada en el informe administrativo.";
 
   const fileStamp = dayjs(
     overview?.generatedAt ?? new Date().toISOString(),
@@ -899,6 +1001,17 @@ export const VotingResultsScene = ({ audience }: VotingResultsSceneProps) => {
     }
   };
 
+  const handleRefresh = async () => {
+    await overviewQuery.query.refetch();
+
+    if (audience === "resident") {
+      await Promise.all([
+        ballotQuery.query.refetch(),
+        residentHistoryQuery.query.refetch(),
+      ]);
+    }
+  };
+
   return (
     <Space direction="vertical" size={20} style={{ width: "100%" }}>
       <PageIntro
@@ -955,8 +1068,13 @@ export const VotingResultsScene = ({ audience }: VotingResultsSceneProps) => {
 
               <Button
                 icon={<ReloadOutlined />}
-                loading={overviewQuery.query.isFetching}
-                onClick={() => overviewQuery.query.refetch()}
+                loading={
+                  overviewQuery.query.isFetching ||
+                  (audience === "resident" &&
+                    (ballotQuery.query.isFetching ||
+                      residentHistoryQuery.query.isFetching))
+                }
+                onClick={handleRefresh}
               >
                 Actualizar
               </Button>
@@ -1055,6 +1173,260 @@ export const VotingResultsScene = ({ audience }: VotingResultsSceneProps) => {
           >
             Corte generado: {formatDate(overview.generatedAt)}
           </Typography.Text>
+        </Card>
+      ) : null}
+
+      {audience === "resident" ? (
+        <Card className="vr-section-card">
+          <Space direction="vertical" size={16} style={{ width: "100%" }}>
+            <div>
+              <Typography.Title level={4} style={{ marginBottom: 6 }}>
+                Mi participación verificable
+              </Typography.Title>
+              <Typography.Text type="secondary">
+                Este bloque usa los mismos datos del backend del informe
+                administrativo para que puedas validar votos, peso y poderes.
+              </Typography.Text>
+            </div>
+
+            {residentHistoryQuery.query.isLoading ? (
+              <Skeleton active paragraph={{ rows: 5 }} />
+            ) : residentHistory?.assembly && residentHistory.participation ? (
+              <Space direction="vertical" size={14} style={{ width: "100%" }}>
+                <Space wrap>
+                  <Tag color={assemblyStatusMap[residentHistory.assembly.status].color}>
+                    {assemblyStatusMap[residentHistory.assembly.status].label}
+                  </Tag>
+                  <Tag>{residentHistory.assembly.title}</Tag>
+                  <Tag>{formatDate(residentHistory.assembly.date)}</Tag>
+                  <Tag color="gold">
+                    {residentHistory.participation.accessMode === "proxy"
+                      ? "Ingreso como apoderado"
+                      : "Ingreso como propietario"}
+                  </Tag>
+                </Space>
+
+                <Row gutter={[12, 12]}>
+                  <Col xs={24} sm={8}>
+                    <div className="vr-results-mini-metric">
+                      <CheckCircleOutlined />
+                      <div>
+                        <strong>
+                          {residentHistory.participation.totalHomesRepresented}
+                        </strong>
+                        <span>Casas representadas</span>
+                      </div>
+                    </div>
+                  </Col>
+                  <Col xs={24} sm={8}>
+                    <div className="vr-results-mini-metric">
+                      <BarChartOutlined />
+                      <div>
+                        <strong>
+                          {formatWeight(
+                            residentHistory.participation.totalWeightRepresented,
+                          )}
+                        </strong>
+                        <span>Peso de voto aplicado</span>
+                      </div>
+                    </div>
+                  </Col>
+                  <Col xs={24} sm={8}>
+                    <div className="vr-results-mini-metric">
+                      <FilePdfOutlined />
+                      <div>
+                        <strong>{residentHistoryDeclarations.length}</strong>
+                        <span>Poderes registrados</span>
+                      </div>
+                    </div>
+                  </Col>
+                </Row>
+
+                {residentHistory.participation.delegatedBy ? (
+                  <Alert
+                    type="warning"
+                    showIcon
+                    message="Tu unidad fue representada por un tercero"
+                    description={`Representante: ${residentHistory.participation.delegatedBy.name} (${residentHistory.participation.delegatedBy.unit ?? "sin unidad"}).`}
+                  />
+                ) : null}
+
+                <Collapse
+                  items={[
+                    {
+                      key: "my-votes",
+                      label: `Mis votos (${residentHistoryVotes.length})`,
+                      children: residentHistoryVotes.length ? (
+                        <Space
+                          direction="vertical"
+                          size={12}
+                          style={{ width: "100%" }}
+                        >
+                          {residentHistoryVotes.map((vote) => (
+                            <Card key={vote.agendaItemId} size="small">
+                              <Space
+                                direction="vertical"
+                                size={8}
+                                style={{ width: "100%" }}
+                              >
+                                <Space wrap>
+                                  <Tag color={surveyStatusMap[vote.agendaStatus].color}>
+                                    {surveyStatusMap[vote.agendaStatus].label}
+                                  </Tag>
+                                  <Tag>{vote.surveyTitle}</Tag>
+                                  <Tag>Pregunta #{vote.agendaItemId}</Tag>
+                                </Space>
+                                <Typography.Text strong>
+                                  {vote.questionTitle}
+                                </Typography.Text>
+                                {vote.questionDescription ? (
+                                  <Typography.Text type="secondary">
+                                    {vote.questionDescription}
+                                  </Typography.Text>
+                                ) : null}
+                                <Typography.Text>
+                                  Respuesta:{" "}
+                                  <strong>
+                                    {vote.selectedOptions.join(", ") ||
+                                      "Sin opciones"}
+                                  </strong>
+                                </Typography.Text>
+                                <Typography.Text type="secondary">
+                                  Mecanismo: {vote.mechanism} · Peso:{" "}
+                                  {formatWeight(vote.weight)} · Registro:{" "}
+                                  {formatDate(vote.recordedAt)}
+                                </Typography.Text>
+                              </Space>
+                            </Card>
+                          ))}
+                        </Space>
+                      ) : (
+                        <Empty
+                          image={Empty.PRESENTED_IMAGE_SIMPLE}
+                          description="No hay votos personales registrados para esta asamblea."
+                        />
+                      ),
+                    },
+                    {
+                      key: "my-powers",
+                      label: `Mis poderes (${residentHistoryDeclarations.length})`,
+                      children: residentHistoryDeclarations.length ? (
+                        <Space
+                          direction="vertical"
+                          size={12}
+                          style={{ width: "100%" }}
+                        >
+                          {residentHistoryDeclarations.map((declaration) => (
+                            <Card key={declaration.id} size="small">
+                              <Space
+                                direction="vertical"
+                                size={8}
+                                style={{ width: "100%" }}
+                              >
+                                <Space wrap>
+                                  <Tag
+                                    color={
+                                      declaration.status === "revoked"
+                                        ? "red"
+                                        : "green"
+                                    }
+                                  >
+                                    {declaration.status === "revoked"
+                                      ? "Revocado"
+                                      : "Activo"}
+                                  </Tag>
+                                  <Tag>ID {declaration.id}</Tag>
+                                  <Tag>
+                                    {declaration.representedResident?.unit ??
+                                      "Sin unidad"}
+                                  </Tag>
+                                </Space>
+                                <Typography.Text strong>
+                                  {declaration.representedResident?.name ??
+                                    "Residente representado"}
+                                </Typography.Text>
+                                <Typography.Text type="secondary">
+                                  Registrado:{" "}
+                                  {formatDate(declaration.registeredAt)}
+                                  {declaration.revokedAt
+                                    ? ` · Revocado: ${formatDate(
+                                        declaration.revokedAt,
+                                      )}`
+                                    : ""}
+                                </Typography.Text>
+                                {declaration.revokedReason ? (
+                                  <Alert
+                                    type="warning"
+                                    showIcon
+                                    message="Motivo de revocación"
+                                    description={declaration.revokedReason}
+                                  />
+                                ) : null}
+                                <Space wrap>
+                                  <Tag>
+                                    Soporte:{" "}
+                                    {declaration.support?.name ??
+                                      "Sin documento"}
+                                  </Tag>
+                                  {declaration.support?.url ? (
+                                    <Button
+                                      href={declaration.support.url}
+                                      rel="noreferrer"
+                                      target="_blank"
+                                      type="link"
+                                    >
+                                      Ver soporte
+                                    </Button>
+                                  ) : null}
+                                </Space>
+                              </Space>
+                            </Card>
+                          ))}
+                        </Space>
+                      ) : (
+                        <Empty
+                          image={Empty.PRESENTED_IMAGE_SIMPLE}
+                          description="No registraste poderes en esta asamblea."
+                        />
+                      ),
+                    },
+                  ]}
+                />
+
+                <Typography.Text type="secondary">
+                  Check-in:{" "}
+                  {formatDate(residentHistory.participation.checkInTime)} ·
+                  Votó:{" "}
+                  {residentHistory.participation.hasCastVotes ? "Sí" : "No"} ·
+                  Bloqueo de representación:{" "}
+                  {residentHistory.participation.representationLocked
+                    ? "Sí"
+                    : "No"}
+                </Typography.Text>
+
+                {residentHistory.legalAcceptance ? (
+                  <Typography.Text type="secondary">
+                    Aceptación legal:{" "}
+                    {formatDate(residentHistory.legalAcceptance.acceptedAt)} ·
+                    Versión:{" "}
+                    {residentHistory.legalAcceptance.documentVersion ??
+                      "Sin versión"}
+                  </Typography.Text>
+                ) : (
+                  <Alert
+                    type="info"
+                    showIcon
+                    message="No hay aceptación legal registrada para esta cuenta."
+                  />
+                )}
+              </Space>
+            ) : (
+              <Empty
+                image={Empty.PRESENTED_IMAGE_SIMPLE}
+                description="No encontramos una asamblea finalizada con participación registrada para tu usuario."
+              />
+            )}
+          </Space>
         </Card>
       ) : null}
 
