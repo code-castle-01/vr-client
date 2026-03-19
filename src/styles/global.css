@@ -1337,8 +1337,9 @@ body {
 
 .vr-proxy-collapse-header {
   display: flex;
-  flex-direction: column;
-  gap: 14px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
   width: 100%;
 }
 
@@ -1346,6 +1347,8 @@ body {
   display: flex;
   align-items: center;
   gap: 14px;
+  flex: 1;
+  min-width: 0;
 }
 
 .vr-proxy-unit-badge {
@@ -1386,9 +1389,9 @@ body {
 .vr-proxy-collapse-title .ant-typography {
   margin: 0 !important;
   color: #343f4a;
-  font-size: 30px;
+  font-size: 22px;
   font-weight: 800;
-  line-height: 1.02;
+  line-height: 1.08;
 }
 
 .vr-proxy-collapse-metrics {
@@ -1399,10 +1402,13 @@ body {
   border: 1px solid rgba(216, 189, 149, 0.48);
   border-radius: 14px;
   background: rgba(241, 239, 237, 0.85);
+  flex-shrink: 0;
+  min-width: 360px;
+  max-width: 480px;
 }
 
 .vr-proxy-metric-chip {
-  padding: 12px 14px;
+  padding: 10px 12px;
   background: transparent;
   text-align: center;
 }
@@ -1414,7 +1420,7 @@ body {
 .vr-proxy-metric-chip strong {
   display: block;
   color: var(--vr-ink);
-  font-size: 24px;
+  font-size: 20px;
   line-height: 1;
 }
 
@@ -1450,7 +1456,7 @@ body {
   display: flex;
   flex: 1;
   width: 100%;
-  padding: 16px 18px;
+  padding: 12px 14px;
   border: 1px solid rgba(224, 211, 191, 0.9);
   border-radius: 18px;
   background: linear-gradient(
@@ -1462,7 +1468,7 @@ body {
 
 .vr-proxy-resident-main {
   display: grid;
-  gap: 12px;
+  gap: 8px;
   width: 100%;
 }
 
@@ -1475,15 +1481,15 @@ body {
 
 .vr-proxy-resident-unit {
   color: #4a5561;
-  font-size: 30px;
+  font-size: 22px;
   font-weight: 500;
 }
 
 .vr-proxy-resident-heading .ant-typography {
   color: #3b4652;
-  font-size: 28px;
+  font-size: 18px;
   font-weight: 700;
-  line-height: 1.02;
+  line-height: 1.14;
 }
 
 .vr-proxy-resident-stats {
@@ -1494,8 +1500,8 @@ body {
 
 .vr-proxy-resident-stat {
   display: grid;
-  gap: 6px;
-  padding: 12px 14px;
+  gap: 4px;
+  padding: 8px 10px;
   border-radius: 16px;
   background: rgba(250, 246, 240, 0.98);
 }
@@ -1513,9 +1519,9 @@ body {
 .vr-proxy-resident-stat .ant-typography + .ant-typography {
   margin: 0;
   color: #2f3944;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 700;
-  line-height: 1.45;
+  line-height: 1.35;
 }
 
 .vr-proxy-resident-actions {
@@ -1531,7 +1537,7 @@ body {
   justify-content: flex-start;
   padding-inline: 0;
   color: #9a640f;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 700;
 }
 
@@ -2047,8 +2053,15 @@ body {
     padding: 18px;
   }
 
+  .vr-proxy-collapse-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
   .vr-proxy-collapse-metrics {
     grid-template-columns: 1fr;
+    min-width: 0;
+    max-width: none;
   }
 
   .vr-proxy-collapse-identity,
@@ -2241,8 +2254,15 @@ html[data-vr-layout="mobile"] .vr-error-boundary-details {
   padding: 18px;
 }
 
+html[data-vr-layout="mobile"] .vr-proxy-collapse-header {
+  flex-direction: column;
+  align-items: stretch;
+}
+
 html[data-vr-layout="mobile"] .vr-proxy-collapse-metrics {
   grid-template-columns: 1fr;
+  min-width: 0;
+  max-width: none;
 }
 
 html[data-vr-layout="mobile"] .vr-proxy-collapse-identity,

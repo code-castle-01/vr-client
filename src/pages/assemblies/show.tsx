@@ -3,6 +3,7 @@ import {
   EyeOutlined,
   TeamOutlined,
 } from "@ant-design/icons";
+import axios from "axios";
 import { DateField, Show, TextField } from "@refinedev/antd";
 import { useCustom, useCustomMutation, useShow } from "@refinedev/core";
 import {
@@ -24,6 +25,7 @@ import {
   Typography,
 } from "antd";
 import { useMemo, useState } from "react";
+import { axiosInstance } from "../../authProvider";
 import { PageIntro } from "../../components";
 import { API_URL } from "../../constants";
 
@@ -100,6 +102,7 @@ type RepresentativeGroup = {
   representedHomesCount: number;
   representative: NonNullable<ProxyItem["submittedBy"]>;
   supportsCount: number;
+  totalVotesCount: number;
   totalCoefficient: number;
 };
 
@@ -190,6 +193,8 @@ export const AssemblyShow = () => {
   const [previewState, setPreviewState] = useState<PreviewState | null>(null);
   const [revokeTarget, setRevokeTarget] = useState<ProxyItem | null>(null);
   const [activeTower, setActiveTower] = useState<string>("all");
+  const [isDownloadingExhaustiveReport, setIsDownloadingExhaustiveReport] =
+    useState(false);
 
   const record = data?.data;
   const proxyQuery = useCustom<AdminProxyResponse>({
@@ -250,7 +255,13 @@ export const AssemblyShow = () => {
     proxySummary?.totalHomesBase ?? 0
   }`;
   const representativeGroups = useMemo<RepresentativeGroup[]>(() => {
-    const groups = new Map<number | string, RepresentativeGroup>();
+    const groups = new Map<
+      number | string,
+      Omit<
+        RepresentativeGroup,
+        "representedHomesCount" | "totalCoefficient" | "totalVotesCount"
+      >
+    >();
 
     activeProxyItems.forEach((item) => {
       if (!item.submittedBy) {
@@ -262,29 +273,58 @@ export const AssemblyShow = () => {
 
       if (existingGroup) {
         existingGroup.items.push(item);
-        existingGroup.representedHomesCount += 1;
         existingGroup.supportsCount += item.document?.id ? 1 : 0;
-        existingGroup.totalCoefficient += Number(
-          item.representedResident?.coefficient ?? 0,
-        );
         return;
       }
 
       groups.set(nextKey, {
         id: nextKey,
         items: [item],
-        representedHomesCount: 1,
         representative: item.submittedBy,
         supportsCount: item.document?.id ? 1 : 0,
-        totalCoefficient: Number(item.representedResident?.coefficient ?? 0),
       });
     });
 
     return Array.from(groups.values())
-      .map((group) => ({
-        ...group,
-        items: group.items.slice().sort(compareProxyItems),
-      }))
+      .map((group) => {
+        const representedResidentsById = new Map<number | string, number>();
+
+        group.items.forEach((item) => {
+          const representedId = item.representedResident?.id ?? `represented-${item.id}`;
+          const representedCoefficient = Number(
+            item.representedResident?.coefficient ?? 0,
+          );
+
+          if (!representedResidentsById.has(representedId)) {
+            representedResidentsById.set(representedId, representedCoefficient);
+          }
+        });
+
+        const representativeId = group.representative.id;
+        const representativeCoefficient = Number(
+          group.representative.coefficient ?? 0,
+        );
+        const includesRepresentative = representedResidentsById.has(representativeId);
+        const representedCoefficient = Array.from(
+          representedResidentsById.values(),
+        ).reduce((sum, currentValue) => sum + currentValue, 0);
+        const representedHomesCount = Math.max(
+          representedResidentsById.size - (includesRepresentative ? 1 : 0),
+          0,
+        );
+        const totalVotesCount = representedHomesCount + 1;
+        const totalCoefficient = includesRepresentative
+          ? representedCoefficient
+          : representedCoefficient + representativeCoefficient;
+
+        return {
+          ...group,
+          items: group.items.slice().sort(compareProxyItems),
+          representedHomesCount,
+          totalVotesCount,
+          totalCoefficient,
+        };
+      })
       .sort((left, right) => {
         const unitComparison = compareText(
           left.representative.unit,
@@ -347,6 +387,81 @@ export const AssemblyShow = () => {
     }
   };
 
+  const handleDownloadExhaustiveReport = async () => {
+    if (!record?.id) {
+      return;
+    }
+
+    if (record.status !== "finished") {
+      message.warning(
+        "El informe exhaustivo solo se puede generar cuando la asamblea esté finalizada.",
+      );
+      return;
+    }
+
+    try {
+      setIsDownloadingExhaustiveReport(true);
+
+      const response = await axiosInstance.get(
+        `${API_URL}/api/assemblies/${record.id}/exhaustive-report`,
+        {
+          responseType: "blob",
+        },
+      );
+      const dispositionHeader = response.headers["content-disposition"] ?? "";
+      const fileNameMatch = dispositionHeader.match(
+        /filename\*?=(?:UTF-8'')?\"?([^\";]+)\"?/i,
+      );
+      const fileName = fileNameMatch?.[1]
+        ? decodeURIComponent(fileNameMatch[1])
+        : `informe-asamblea-${record.id}.pdf`;
+      const blob = new Blob([response.data], {
+        type: response.headers["content-type"] ?? "application/pdf",
+      });
+      const objectUrl = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+
+      link.href = objectUrl;
+      link.download = fileName;
+      link.rel = "noopener";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(objectUrl);
+
+      message.success("El informe PDF se descargó correctamente.");
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        const status = error.response?.status;
+
+        if (status === 409) {
+          message.warning(
+            "El informe exhaustivo solo está disponible cuando la asamblea esté finalizada.",
+          );
+          return;
+        }
+
+        if (status === 401 || status === 403) {
+          message.error(
+            "No tienes permisos para descargar este informe de asamblea.",
+          );
+          return;
+        }
+
+        const backendMessage =
+          (error.response?.data as { error?: { message?: string } } | undefined)
+            ?.error?.message ?? error.message;
+
+        message.error(backendMessage || "No fue posible generar el informe PDF.");
+        return;
+      }
+
+      message.error("No fue posible generar el informe PDF.");
+    } finally {
+      setIsDownloadingExhaustiveReport(false);
+    }
+  };
+
   return (
     <>
       <PageIntro
@@ -378,6 +493,26 @@ export const AssemblyShow = () => {
                     ? "Finalizada"
                     : "Programada"}
               </Tag>
+              <Space
+                direction="vertical"
+                size={8}
+                style={{ marginTop: 12, width: "100%" }}
+              >
+                <Button
+                  icon={<DownloadOutlined />}
+                  type="primary"
+                  onClick={handleDownloadExhaustiveReport}
+                  loading={isDownloadingExhaustiveReport}
+                  disabled={record?.status !== "finished"}
+                >
+                  Descargar informe exhaustivo (PDF)
+                </Button>
+                {record?.status !== "finished" ? (
+                  <Text type="secondary">
+                    Disponible solo cuando la asamblea esté finalizada.
+                  </Text>
+                ) : null}
+              </Space>
             </Card>
           </Col>
           <Col xs={24}>
@@ -507,7 +642,12 @@ export const AssemblyShow = () => {
                                 {group.representedHomesCount}{" "}
                                 {group.representedHomesCount === 1
                                   ? "residente representado"
-                                  : "residentes representados"}
+                                  : "residentes representados"}{" "}
+                                · {group.totalVotesCount}{" "}
+                                {group.totalVotesCount === 1
+                                  ? "voto total"
+                                  : "votos totales"}{" "}
+                                (incluye titular)
                               </Text>
                             </Space>
                           </div>
