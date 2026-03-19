@@ -20,6 +20,7 @@ import {
   List,
   Modal,
   Row,
+  Segmented,
   Space,
   Tag,
   Typography,
@@ -104,6 +105,66 @@ type RepresentativeGroup = {
   totalCoefficient: number;
 };
 
+const normalizeText = (value?: string | null) =>
+  value?.trim().toLowerCase() ?? "";
+
+const compareText = (left?: string | null, right?: string | null) =>
+  normalizeText(left).localeCompare(normalizeText(right), "es");
+
+const getTowerKey = (unit?: string | null) => {
+  const normalizedUnit = unit?.trim().toUpperCase() ?? "";
+  const matchedTower = normalizedUnit.match(/^(M\d+)/);
+
+  return matchedTower?.[1] ?? "OTROS";
+};
+
+const compareTowerKey = (left: string, right: string) => {
+  if (left === "OTROS") {
+    return 1;
+  }
+
+  if (right === "OTROS") {
+    return -1;
+  }
+
+  const leftNumber = Number(left.replace("M", ""));
+  const rightNumber = Number(right.replace("M", ""));
+
+  if (Number.isFinite(leftNumber) && Number.isFinite(rightNumber)) {
+    return leftNumber - rightNumber;
+  }
+
+  return left.localeCompare(right, "es");
+};
+
+const getProxyTowerKey = (item: ProxyItem) =>
+  getTowerKey(item.representedResident?.unit ?? item.submittedBy?.unit);
+
+const compareProxyItems = (left: ProxyItem, right: ProxyItem) => {
+  const towerComparison = compareTowerKey(
+    getProxyTowerKey(left),
+    getProxyTowerKey(right),
+  );
+
+  if (towerComparison !== 0) {
+    return towerComparison;
+  }
+
+  const unitComparison = compareText(
+    left.representedResident?.unit ?? left.submittedBy?.unit,
+    right.representedResident?.unit ?? right.submittedBy?.unit,
+  );
+
+  if (unitComparison !== 0) {
+    return unitComparison;
+  }
+
+  return compareText(
+    left.representedResident?.name ?? left.submittedBy?.name,
+    right.representedResident?.name ?? right.submittedBy?.name,
+  );
+};
+
 const buildDocumentUrl = (url?: string | null) => {
   if (!url) {
     return null;
@@ -130,6 +191,7 @@ export const AssemblyShow = () => {
   const { data, isLoading } = query;
   const [previewState, setPreviewState] = useState<PreviewState | null>(null);
   const [revokeTarget, setRevokeTarget] = useState<ProxyItem | null>(null);
+  const [activeTower, setActiveTower] = useState<string>("all");
 
   const record = data?.data;
   const proxyQuery = useCustom<AdminProxyResponse>({
@@ -146,9 +208,46 @@ export const AssemblyShow = () => {
   });
 
   const proxySummary = proxyQuery.query.data?.data?.summary;
-  const proxyItems = proxyQuery.query.data?.data?.items ?? [];
-  const activeProxyItems = proxyItems.filter((item) => item.status !== "revoked");
-  const revokedProxyItems = proxyItems.filter((item) => item.status === "revoked");
+  const proxyItems = useMemo(
+    () => (proxyQuery.query.data?.data?.items ?? []).slice().sort(compareProxyItems),
+    [proxyQuery.query.data?.data?.items],
+  );
+  const towerOptions = useMemo(() => {
+    const counts = new Map<string, number>();
+
+    proxyItems.forEach((item) => {
+      const towerKey = getProxyTowerKey(item);
+      counts.set(towerKey, (counts.get(towerKey) ?? 0) + 1);
+    });
+
+    const sortedTowers = [...counts.entries()]
+      .sort(([leftKey], [rightKey]) => compareTowerKey(leftKey, rightKey))
+      .map(([towerKey, total]) => ({
+        label: `${towerKey} (${total})`,
+        value: towerKey,
+      }));
+
+    return [
+      { label: `Todos (${proxyItems.length})`, value: "all" },
+      ...sortedTowers,
+    ];
+  }, [proxyItems]);
+  const selectedTower = towerOptions.some((option) => option.value === activeTower)
+    ? activeTower
+    : "all";
+  const filteredProxyItems = useMemo(
+    () =>
+      selectedTower === "all"
+        ? proxyItems
+        : proxyItems.filter((item) => getProxyTowerKey(item) === selectedTower),
+    [proxyItems, selectedTower],
+  );
+  const activeProxyItems = filteredProxyItems.filter(
+    (item) => item.status !== "revoked",
+  );
+  const revokedProxyItems = filteredProxyItems.filter(
+    (item) => item.status === "revoked",
+  );
   const quorumProgressLabel = `${proxySummary?.enabledHomesCount ?? 0} / ${
     proxySummary?.totalHomesBase ?? 0
   }`;
@@ -183,11 +282,23 @@ export const AssemblyShow = () => {
       });
     });
 
-    return Array.from(groups.values()).sort((left, right) =>
-      `${left.representative.unit ?? ""}${left.representative.name}`.localeCompare(
-        `${right.representative.unit ?? ""}${right.representative.name}`,
-      ),
-    );
+    return Array.from(groups.values())
+      .map((group) => ({
+        ...group,
+        items: group.items.slice().sort(compareProxyItems),
+      }))
+      .sort((left, right) => {
+        const unitComparison = compareText(
+          left.representative.unit,
+          right.representative.unit,
+        );
+
+        if (unitComparison !== 0) {
+          return unitComparison;
+        }
+
+        return compareText(left.representative.name, right.representative.name);
+      });
   }, [activeProxyItems]);
 
   const openRevokeModal = (item: ProxyItem) => {
@@ -349,6 +460,29 @@ export const AssemblyShow = () => {
                 </div>
               </div>
 
+              {towerOptions.length > 1 ? (
+                <Space
+                  direction="vertical"
+                  size={10}
+                  style={{ width: "100%", marginTop: 20 }}
+                >
+                  <div>
+                    <Text strong>Filtro por torre</Text>
+                    <br />
+                    <Text type="secondary">
+                      Visualiza los poderes por bloque y con orden alfabético por
+                      unidad y nombre.
+                    </Text>
+                  </div>
+                  <Segmented
+                    block
+                    options={towerOptions}
+                    value={selectedTower}
+                    onChange={(value) => setActiveTower(String(value))}
+                  />
+                </Space>
+              ) : null}
+
               {representativeGroups.length > 0 ? (
                 <Collapse
                   accordion
@@ -401,6 +535,7 @@ export const AssemblyShow = () => {
                                 documentUrl ? (
                                   <Button
                                     key={`preview-${item.id}`}
+                                    size="small"
                                     type="link"
                                     icon={
                                       isPdfDocument(nextPreview) ? (
@@ -426,6 +561,7 @@ export const AssemblyShow = () => {
                                 documentUrl ? (
                                   <Button
                                     key={`download-${item.id}`}
+                                    size="small"
                                     type="link"
                                     icon={<DownloadOutlined />}
                                     href={documentUrl}
@@ -443,37 +579,49 @@ export const AssemblyShow = () => {
                             >
                               <div className="vr-proxy-resident-card">
                                 <div className="vr-proxy-resident-main">
-                                  <Text strong>
-                                    {item.representedResident?.unit ?? "Sin unidad"}
-                                  </Text>
-                                  <Title level={5} style={{ margin: 0 }}>
-                                    {item.representedResident?.name ?? "Sin registro"}
-                                  </Title>
                                   <Space wrap>
+                                    <Text strong>
+                                      {item.representedResident?.unit ?? "Sin unidad"}
+                                    </Text>
+                                    <Title level={5} style={{ margin: 0 }}>
+                                      {item.representedResident?.name ?? "Sin registro"}
+                                    </Title>
+                                  </Space>
+                                  <div className="vr-proxy-resident-stats">
+                                    <div className="vr-proxy-resident-stat">
+                                      <span>Coeficiente</span>
+                                      <strong>
+                                        {Number(
+                                          item.representedResident?.coefficient ?? 0,
+                                        ).toFixed(6)}
+                                      </strong>
+                                    </div>
+                                    <div className="vr-proxy-resident-stat">
+                                      <span>Registro</span>
+                                      {item.registeredAt ? (
+                                        <DateField
+                                          value={item.registeredAt}
+                                          format="DD MMM YYYY - hh:mm A"
+                                        />
+                                      ) : (
+                                        <Text type="secondary">Sin fecha</Text>
+                                      )}
+                                    </div>
+                                    <div className="vr-proxy-resident-stat">
+                                      <span>Soporte</span>
+                                      <strong>
+                                        {item.document?.name ? "Cargado" : "Pendiente"}
+                                      </strong>
+                                    </div>
+                                  </div>
+                                  <Space wrap size={[6, 6]}>
                                     <Tag color="green">Activo</Tag>
-                                    <Tag color="gold">
-                                      Coeficiente{" "}
-                                      {Number(
-                                        item.representedResident?.coefficient ?? 0,
-                                      ).toFixed(6)}
-                                    </Tag>
                                     {item.document?.name ? (
                                       <Tag color="processing">
                                         {item.document.name}
                                       </Tag>
                                     ) : null}
                                   </Space>
-                                </div>
-                                <div className="vr-proxy-resident-meta">
-                                  <span>Registro</span>
-                                  {item.registeredAt ? (
-                                    <DateField
-                                      value={item.registeredAt}
-                                      format="DD MMM YYYY - hh:mm A"
-                                    />
-                                  ) : (
-                                    <Text type="secondary">Sin fecha</Text>
-                                  )}
                                 </div>
                               </div>
                             </List.Item>
@@ -514,6 +662,7 @@ export const AssemblyShow = () => {
                             documentUrl ? (
                               <Button
                                 key={`preview-revoked-${item.id}`}
+                                size="small"
                                 type="link"
                                 icon={
                                   isPdfDocument(nextPreview) ? (
@@ -540,13 +689,42 @@ export const AssemblyShow = () => {
                         >
                           <div className="vr-proxy-resident-card">
                             <div className="vr-proxy-resident-main">
-                              <Text strong>
-                                {item.representedResident?.unit ?? "Sin unidad"}
-                              </Text>
-                              <Title level={5} style={{ margin: 0 }}>
-                                {item.representedResident?.name ?? "Sin registro"}
-                              </Title>
                               <Space wrap>
+                                <Text strong>
+                                  {item.representedResident?.unit ?? "Sin unidad"}
+                                </Text>
+                                <Title level={5} style={{ margin: 0 }}>
+                                  {item.representedResident?.name ?? "Sin registro"}
+                                </Title>
+                              </Space>
+                              <div className="vr-proxy-resident-stats">
+                                <div className="vr-proxy-resident-stat">
+                                  <span>Revocación</span>
+                                  {item.revokedAt ? (
+                                    <DateField
+                                      value={item.revokedAt}
+                                      format="DD MMM YYYY - hh:mm A"
+                                    />
+                                  ) : (
+                                    <Text type="secondary">Sin fecha</Text>
+                                  )}
+                                </div>
+                                <div className="vr-proxy-resident-stat">
+                                  <span>Representante</span>
+                                  <strong>
+                                    {item.submittedBy?.unit ??
+                                      item.submittedBy?.name ??
+                                      "Sin registro"}
+                                  </strong>
+                                </div>
+                                <div className="vr-proxy-resident-stat">
+                                  <span>Soporte</span>
+                                  <strong>
+                                    {item.document?.name ? "Disponible" : "Sin soporte"}
+                                  </strong>
+                                </div>
+                              </div>
+                              <Space wrap size={[6, 6]}>
                                 <Tag color="red">Revocado</Tag>
                                 {item.submittedBy?.unit ? (
                                   <Tag color="processing">
@@ -558,20 +736,9 @@ export const AssemblyShow = () => {
                                 <Text strong>Motivo:</Text>{" "}
                                 {item.revokedReason ?? "Sin observación registrada."}
                               </Paragraph>
-                            </div>
-                            <div className="vr-proxy-resident-meta">
-                              <span>Revocación</span>
-                              {item.revokedAt ? (
-                                <DateField
-                                  value={item.revokedAt}
-                                  format="DD MMM YYYY - hh:mm A"
-                                />
-                              ) : (
-                                <Text type="secondary">Sin fecha</Text>
-                              )}
                               {item.revokedBy?.name ? (
                                 <Text type="secondary">
-                                  Por {item.revokedBy.name}
+                                  Revocado por {item.revokedBy.name}
                                 </Text>
                               ) : null}
                             </div>
