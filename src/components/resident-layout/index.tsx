@@ -3,7 +3,10 @@ import { useGetIdentity, useLogout } from "@refinedev/core";
 import { Button, Flex, Typography, message } from "antd";
 import { useEffect, useState } from "react";
 import { NavLink, Outlet } from "react-router";
-import { updateCurrentAccountName } from "../../authProvider";
+import {
+  getCurrentAccount,
+  updateCurrentAccountName,
+} from "../../authProvider";
 import { AppLogo } from "../app-logo";
 
 type Identity = {
@@ -24,6 +27,30 @@ export const ResidentLayout = () => {
   useEffect(() => {
     setDisplayName(identity?.name?.trim() || "Residente");
   }, [identity?.name]);
+
+  useEffect(() => {
+    let isDisposed = false;
+
+    const validateResidentSession = async () => {
+      const currentAccount = await getCurrentAccount();
+
+      if (isDisposed || currentAccount) {
+        return;
+      }
+
+      logout();
+    };
+
+    void validateResidentSession();
+    const intervalId = window.setInterval(() => {
+      void validateResidentSession();
+    }, 15000);
+
+    return () => {
+      isDisposed = true;
+      window.clearInterval(intervalId);
+    };
+  }, [logout]);
 
   const handleNameUpdate = async (nextValue: string) => {
     const normalizedName = nextValue.trim().replace(/\s+/g, " ");

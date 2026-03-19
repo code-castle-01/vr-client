@@ -24,6 +24,10 @@ import dayjs from "dayjs";
 import { useDeferredValue, useMemo, useState } from "react";
 import { Link } from "react-router";
 import { API_URL } from "../../constants";
+import {
+  DEFAULT_RESIDENT_LOGIN_DISABLED_MESSAGE,
+  type ResidentAccessConfigResponse,
+} from "../../resident-access";
 import { useDeviceLayout } from "../../utils/device-mode";
 
 type ResidentLegalDocumentResponse = {
@@ -76,9 +80,22 @@ export const LoginPage = () => {
     [residentUnitValue],
   );
   const deferredResidentUnit = useDeferredValue(normalizedResidentUnit);
+  const residentAccessConfigQuery = useCustom<ResidentAccessConfigResponse>({
+    method: "get",
+    url: `${API_URL}/api/account/resident-access-config`,
+  });
+  const residentAccessConfig = residentAccessConfigQuery.query.data?.data;
+  const residentPortalEnabled =
+    residentAccessConfig?.residentLoginEnabled !== false;
+  const residentPortalDisabledMessage =
+    residentAccessConfig?.residentLoginDisabledMessage?.trim() ||
+    DEFAULT_RESIDENT_LOGIN_DISABLED_MESSAGE;
   const legalQuery = useCustom<ResidentLegalDocumentResponse>({
     method: "get",
     url: `${API_URL}/api/account/resident-legal`,
+    queryOptions: {
+      enabled: residentPortalEnabled,
+    },
   });
   const legalStatusQuery = useCustom<ResidentLegalStatusResponse>({
     method: "get",
@@ -86,7 +103,7 @@ export const LoginPage = () => {
       deferredResidentUnit,
     )}`,
     queryOptions: {
-      enabled: Boolean(deferredResidentUnit),
+      enabled: residentPortalEnabled && Boolean(deferredResidentUnit),
     },
   });
 
@@ -102,6 +119,8 @@ export const LoginPage = () => {
     : true;
   const residentSubmitDisabled =
     isPending ||
+    residentAccessConfigQuery.query.isLoading ||
+    !residentPortalEnabled ||
     !normalizedResidentUnit ||
     !residentAccessMode ||
     legalQuery.query.isLoading ||
@@ -185,14 +204,23 @@ export const LoginPage = () => {
                     <Typography.Title level={2} className="vr-auth-panel-title">
                       Ingreso a la asamblea
                     </Typography.Title>
-                    <Typography.Paragraph className="vr-auth-panel-copy">
-                      Si es <i>residente</i> entrar como <b>PROPIETARIO</b> y su
-                      unidad.
-                    </Typography.Paragraph>
-                    <Typography.Paragraph className="vr-auth-panel-copy">
-                      Si viene a <i>representar</i> como <b>APODERADO</b> entrar
-                      con la unidad a representar.
-                    </Typography.Paragraph>
+                    {residentPortalEnabled ? (
+                      <>
+                        <Typography.Paragraph className="vr-auth-panel-copy">
+                          Si es <i>residente</i> entrar como <b>PROPIETARIO</b>{" "}
+                          y su unidad.
+                        </Typography.Paragraph>
+                        <Typography.Paragraph className="vr-auth-panel-copy">
+                          Si viene a <i>representar</i> como <b>APODERADO</b>{" "}
+                          entrar con la unidad a representar.
+                        </Typography.Paragraph>
+                      </>
+                    ) : (
+                      <Typography.Paragraph className="vr-auth-panel-copy">
+                        El acceso del residente ya se encuentra cerrado porque
+                        la asamblea terminó.
+                      </Typography.Paragraph>
+                    )}
                     <Typography.Paragraph className="vr-auth-panel-copy">
                       El <i>ADMINISTRADOR</i> gestiona usuarios, asambleas y
                       encuestas.
@@ -203,7 +231,16 @@ export const LoginPage = () => {
                     <Alert message={errorMessage} type="error" showIcon />
                   ) : null}
 
-                  {legalQuery.query.isError ? (
+                  {!residentPortalEnabled ? (
+                    <Alert
+                      type="info"
+                      showIcon
+                      message="Portal residente cerrado"
+                      description={residentPortalDisabledMessage}
+                    />
+                  ) : null}
+
+                  {residentPortalEnabled && legalQuery.query.isError ? (
                     <Alert
                       type="warning"
                       showIcon
@@ -213,140 +250,145 @@ export const LoginPage = () => {
                   ) : null}
 
                   <Tabs
-                    defaultActiveKey="resident"
+                    key={residentPortalEnabled ? "resident-open" : "resident-closed"}
+                    defaultActiveKey={residentPortalEnabled ? "resident" : "admin"}
                     items={[
-                      {
-                        key: "resident",
-                        label: "Residente",
-                        children: (
-                          <Form<ResidentLoginFormValues>
-                            className="vr-auth-form"
-                            form={residentForm}
-                            layout="vertical"
-                            onFinish={handleResidentSubmit}
-                            requiredMark={false}
-                            initialValues={{
-                              legalAccepted: false,
-                              loginType: "resident",
-                              residentAccessMode: "owner",
-                            }}
-                          >
-                            <Flex
-                              align="center"
-                              justify="space-between"
-                              gap={4}
-                            >
-                              <Form.Item
-                                label="Ingresas como"
-                                name="residentAccessMode"
-                                rules={[
-                                  {
-                                    required: true,
-                                    message:
-                                      "Selecciona si ingresas como propietario o apoderado.",
-                                  },
-                                ]}
-                              >
-                                <Radio.Group
-                                  optionType="default"
-                                  buttonStyle="solid"
-                                  size="large"
+                      ...(residentPortalEnabled
+                        ? [
+                            {
+                              key: "resident",
+                              label: "Residente",
+                              children: (
+                                <Form<ResidentLoginFormValues>
+                                  className="vr-auth-form"
+                                  form={residentForm}
+                                  layout="vertical"
+                                  onFinish={handleResidentSubmit}
+                                  requiredMark={false}
+                                  initialValues={{
+                                    legalAccepted: false,
+                                    loginType: "resident",
+                                    residentAccessMode: "owner",
+                                  }}
                                 >
-                                  <Radio.Button value="owner">
-                                    PROPIETARIO
-                                  </Radio.Button>
-                                  <Radio.Button value="proxy">
-                                    APODERADO
-                                  </Radio.Button>
-                                </Radio.Group>
-                              </Form.Item>
-                              <Form.Item
-                                label="Unidad"
-                                name="unit"
-                                extra="Ejemplo: M1-01"
-                                normalize={normalizeUnit}
-                                rules={[
-                                  {
-                                    required: true,
-                                    message: "Ingresa tu unidad privada.",
-                                  },
-                                ]}
-                              >
-                                <Input
-                                  autoComplete="username"
-                                  placeholder="M0-00"
-                                  size="large"
-                                  allowClear
-                                />
-                              </Form.Item>
-                            </Flex>
-                            <div className="vr-auth-legal-block">
-                              {residentAlreadyAcceptedCurrentVersion ? (
-                                <Alert
-                                  type="success"
-                                  showIcon
-                                  message={`Ya aceptaste la version vigente (${
-                                    currentLegalStatus?.currentVersion ??
-                                    currentLegalDocument?.version ??
-                                    "actual"
-                                  }).`}
-                                  description={
-                                    currentLegalStatus?.acceptedAt
-                                      ? `Aceptada el ${dayjs(
-                                          currentLegalStatus.acceptedAt,
-                                        ).format("DD MMM YYYY - hh:mm A")}.`
-                                      : "Puedes ingresar sin volver a marcar el checkbox."
-                                  }
-                                />
-                              ) : normalizedResidentUnit ? (
-                                <Form.Item
-                                  className="vr-auth-legal-checkbox"
-                                  name="legalAccepted"
-                                  rules={[
-                                    {
-                                      validator: async (_, value) => {
-                                        if (
-                                          !residentRequiresAcceptance ||
-                                          value === true
-                                        ) {
-                                          return;
+                                  <Flex
+                                    align="center"
+                                    justify="space-between"
+                                    gap={4}
+                                  >
+                                    <Form.Item
+                                      label="Ingresas como"
+                                      name="residentAccessMode"
+                                      rules={[
+                                        {
+                                          required: true,
+                                          message:
+                                            "Selecciona si ingresas como propietario o apoderado.",
+                                        },
+                                      ]}
+                                    >
+                                      <Radio.Group
+                                        optionType="default"
+                                        buttonStyle="solid"
+                                        size="large"
+                                      >
+                                        <Radio.Button value="owner">
+                                          PROPIETARIO
+                                        </Radio.Button>
+                                        <Radio.Button value="proxy">
+                                          APODERADO
+                                        </Radio.Button>
+                                      </Radio.Group>
+                                    </Form.Item>
+                                    <Form.Item
+                                      label="Unidad"
+                                      name="unit"
+                                      extra="Ejemplo: M1-01"
+                                      normalize={normalizeUnit}
+                                      rules={[
+                                        {
+                                          required: true,
+                                          message: "Ingresa tu unidad privada.",
+                                        },
+                                      ]}
+                                    >
+                                      <Input
+                                        autoComplete="username"
+                                        placeholder="M0-00"
+                                        size="large"
+                                        allowClear
+                                      />
+                                    </Form.Item>
+                                  </Flex>
+                                  <div className="vr-auth-legal-block">
+                                    {residentAlreadyAcceptedCurrentVersion ? (
+                                      <Alert
+                                        type="success"
+                                        showIcon
+                                        message={`Ya aceptaste la version vigente (${
+                                          currentLegalStatus?.currentVersion ??
+                                          currentLegalDocument?.version ??
+                                          "actual"
+                                        }).`}
+                                        description={
+                                          currentLegalStatus?.acceptedAt
+                                            ? `Aceptada el ${dayjs(
+                                                currentLegalStatus.acceptedAt,
+                                              ).format("DD MMM YYYY - hh:mm A")}.`
+                                            : "Puedes ingresar sin volver a marcar el checkbox."
                                         }
+                                      />
+                                    ) : normalizedResidentUnit ? (
+                                      <Form.Item
+                                        className="vr-auth-legal-checkbox"
+                                        name="legalAccepted"
+                                        rules={[
+                                          {
+                                            validator: async (_, value) => {
+                                              if (
+                                                !residentRequiresAcceptance ||
+                                                value === true
+                                              ) {
+                                                return;
+                                              }
 
-                                        throw new Error(
-                                          "Debes aceptar la politica y los terminos antes de ingresar.",
-                                        );
-                                      },
-                                    },
-                                  ]}
-                                  valuePropName="checked"
-                                >
-                                  <Checkbox>
-                                    {currentLegalDocument?.checkboxLabel ??
-                                      "He leido y acepto la Politica de Tratamiento de Datos Personales y los Terminos y Condiciones del portal de la asamblea."}
-                                  </Checkbox>
-                                </Form.Item>
-                              ) : (
-                                <Typography.Paragraph className="vr-auth-note">
-                                  Escriba su unidad y acepte terminos y
-                                  condiciones antes de ingresar.
-                                </Typography.Paragraph>
-                              )}
-                            </div>
+                                              throw new Error(
+                                                "Debes aceptar la politica y los terminos antes de ingresar.",
+                                              );
+                                            },
+                                          },
+                                        ]}
+                                        valuePropName="checked"
+                                      >
+                                        <Checkbox>
+                                          {currentLegalDocument?.checkboxLabel ??
+                                            "He leido y acepto la Politica de Tratamiento de Datos Personales y los Terminos y Condiciones del portal de la asamblea."}
+                                        </Checkbox>
+                                      </Form.Item>
+                                    ) : (
+                                      <Typography.Paragraph className="vr-auth-note">
+                                        Escriba su unidad y acepte terminos y
+                                        condiciones antes de ingresar.
+                                      </Typography.Paragraph>
+                                    )}
+                                  </div>
 
-                            <Button
-                              block
-                              className="vr-auth-submit"
-                              disabled={residentSubmitDisabled}
-                              htmlType="submit"
-                              loading={isPending}
-                              size="large"
-                              type="primary"
-                            >
-                              Ingresar al portal
-                            </Button>
-                          </Form>
-                        ),
-                      },
+                                  <Button
+                                    block
+                                    className="vr-auth-submit"
+                                    disabled={residentSubmitDisabled}
+                                    htmlType="submit"
+                                    loading={isPending}
+                                    size="large"
+                                    type="primary"
+                                  >
+                                    Ingresar al portal
+                                  </Button>
+                                </Form>
+                              ),
+                            },
+                          ]
+                        : []),
                       {
                         key: "admin",
                         label: "Administrador",
@@ -413,37 +455,46 @@ export const LoginPage = () => {
 
                   <Divider style={{ margin: 0 }} />
 
-                  <Space align="start" size={12}>
-                    <TeamOutlined
-                      style={{ color: "#8b4c16", fontSize: 18, marginTop: 3 }}
-                    />
-                    <Typography.Paragraph className="vr-auth-note">
-                      Como propietario puedes sumar hasta 2 poderes extra. Como
-                      apoderado debes adjuntar primero el soporte de la unidad
-                      con la que ingresaste y solo podras representar una unidad
-                      adicional.
-                    </Typography.Paragraph>
-                  </Space>
+                  {residentPortalEnabled ? (
+                    <>
+                      <Space align="start" size={12}>
+                        <TeamOutlined
+                          style={{ color: "#8b4c16", fontSize: 18, marginTop: 3 }}
+                        />
+                        <Typography.Paragraph className="vr-auth-note">
+                          Como propietario puedes sumar hasta 2 poderes extra.
+                          Como apoderado debes adjuntar primero el soporte de la
+                          unidad con la que ingresaste y solo podras representar
+                          una unidad adicional.
+                        </Typography.Paragraph>
+                      </Space>
 
-                  <Typography.Paragraph className="vr-auth-note">
-                    <FileTextOutlined
-                      style={{ marginRight: 8, color: "#8b4c16" }}
-                    />
-                    {currentLegalDocument?.title ??
-                      "Politica de tratamiento y terminos del portal"}
-                  </Typography.Paragraph>
-                  <Typography.Paragraph className="vr-auth-note">
-                    Consulta el documento vigente en{" "}
-                    <Link
-                      className="vr-auth-legal-link"
-                      to="/politica-de-privacidad"
-                    >
-                      /politica-de-privacidad
-                    </Link>
-                    {currentLegalDocument?.version
-                      ? `, version ${currentLegalDocument.version}.`
-                      : "."}
-                  </Typography.Paragraph>
+                      <Typography.Paragraph className="vr-auth-note">
+                        <FileTextOutlined
+                          style={{ marginRight: 8, color: "#8b4c16" }}
+                        />
+                        {currentLegalDocument?.title ??
+                          "Politica de tratamiento y terminos del portal"}
+                      </Typography.Paragraph>
+                      <Typography.Paragraph className="vr-auth-note">
+                        Consulta el documento vigente en{" "}
+                        <Link
+                          className="vr-auth-legal-link"
+                          to="/politica-de-privacidad"
+                        >
+                          /politica-de-privacidad
+                        </Link>
+                        {currentLegalDocument?.version
+                          ? `, version ${currentLegalDocument.version}.`
+                          : "."}
+                      </Typography.Paragraph>
+                    </>
+                  ) : (
+                    <Typography.Paragraph className="vr-auth-note">
+                      El ingreso de residentes permanecerá deshabilitado hasta
+                      que el administrador vuelva a habilitarlo desde el panel.
+                    </Typography.Paragraph>
+                  )}
                 </Space>
               </div>
             </Col>

@@ -174,7 +174,7 @@ export const authProvider: AuthProvider = {
           };
         }
 
-        const { data, status } = await axios.post(`${API_URL}/api/auth/local`, {
+        const { data, status } = await axios.post(`${API_URL}/api/account/admin-login`, {
           identifier: loginIdentifier,
           password,
         });
@@ -292,9 +292,13 @@ export const authProvider: AuthProvider = {
       axiosInstance.defaults.headers.common[
         "Authorization"
       ] = `Bearer ${token}`;
-      return {
-        authenticated: true,
-      };
+      const account = await getCurrentAccount();
+
+      if (account) {
+        return {
+          authenticated: true,
+        };
+      }
     }
 
     clearBrowserSession();
