@@ -1,5 +1,5 @@
 import { EditOutlined, HomeFilled, LogoutOutlined } from "@ant-design/icons";
-import { useGetIdentity, useLogout } from "@refinedev/core";
+import { useCustom, useGetIdentity, useLogout } from "@refinedev/core";
 import { Button, Flex, Typography, message } from "antd";
 import { useEffect, useState } from "react";
 import { NavLink, Outlet } from "react-router";
@@ -7,6 +7,7 @@ import {
   getCurrentAccount,
   updateCurrentAccountName,
 } from "../../authProvider";
+import { API_URL } from "../../constants";
 import { AppLogo } from "../app-logo";
 
 type Identity = {
@@ -14,15 +15,31 @@ type Identity = {
   unit?: string | null;
 };
 
+type ProxySummaryForNav = {
+  assembly?: {
+    id: number;
+    status: "scheduled" | "in_progress" | "finished";
+  } | null;
+};
+
 const getNavClassName = ({ isActive }: { isActive: boolean }) =>
   `vr-resident-nav__link${isActive ? " vr-resident-nav__link--active" : ""}`;
 
 export const ResidentLayout = () => {
   const { data: identity, refetch } = useGetIdentity<Identity>();
+  const proxySummaryQuery = useCustom<ProxySummaryForNav>({
+    url: `${API_URL}/api/proxy-authorizations/mine`,
+    method: "get",
+  });
   const { mutate: logout } = useLogout();
   const [messageApi, contextHolder] = message.useMessage();
   const [displayName, setDisplayName] = useState("Residente");
   const [isSavingName, setIsSavingName] = useState(false);
+  const proxySummary = proxySummaryQuery.query.data?.data;
+  const shouldShowPowersLink =
+    proxySummaryQuery.query.isError || proxySummary === undefined
+      ? true
+      : Boolean(proxySummary.assembly);
 
   useEffect(() => {
     setDisplayName(identity?.name?.trim() || "Residente");
@@ -151,9 +168,11 @@ export const ResidentLayout = () => {
 
         <section className="vr-resident-main">
           <div className="vr-resident-nav">
-            <NavLink to="/representacion" className={getNavClassName}>
-              Poderes
-            </NavLink>
+            {shouldShowPowersLink ? (
+              <NavLink to="/representacion" className={getNavClassName}>
+                Poderes
+              </NavLink>
+            ) : null}
             <NavLink to="/encuestas" className={getNavClassName}>
               Encuestas
             </NavLink>

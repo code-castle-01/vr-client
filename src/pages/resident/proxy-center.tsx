@@ -78,6 +78,10 @@ type RevokedDeclarationSummary = {
 
 type ProxySummary = {
   accessMode: "owner" | "proxy";
+  assembly?: {
+    id: number;
+    status: "scheduled" | "in_progress" | "finished";
+  } | null;
   canManageDeclarations: boolean;
   canProceedToSurveys: boolean;
   canSubmitDeclarations: boolean;
@@ -440,6 +444,38 @@ export const ProxyCenterPage = () => {
     ((summary.accessMode === "proxy" &&
       (shouldRenderProxyBaseForm || declarationSlotCount > 0)) ||
       (summary.accessMode === "owner" && (editingOwner || hasOutgoingRevocations)));
+  const hasActiveAssembly = Boolean(summary?.assembly);
+
+  if (summary && !hasActiveAssembly) {
+    return (
+      <Space direction="vertical" size={20} style={{ width: "100%" }}>
+        <div className="vr-page-intro" style={{ marginBottom: 0 }}>
+          <div className="vr-page-kicker">Representacion</div>
+          <h1 className="vr-page-title">Poderes del propietario</h1>
+          <p className="vr-page-description">
+            No hay asambleas programadas o en curso para registrar poderes en este
+            momento.
+          </p>
+        </div>
+
+        <Card className="vr-section-card">
+          <Result
+            status="info"
+            title="Sin gestión de poderes activa"
+            subTitle="Cuando administración programe o inicie una asamblea, este módulo volverá a habilitarse automáticamente."
+            extra={[
+              <Button key="results" type="primary" href="/mis-resultados">
+                Ver mis resultados
+              </Button>,
+              <Button key="documents" href="/documentos">
+                Ver documentos
+              </Button>,
+            ]}
+          />
+        </Card>
+      </Space>
+    );
+  }
 
   return (
     <Space direction="vertical" size={20} style={{ width: "100%" }}>
