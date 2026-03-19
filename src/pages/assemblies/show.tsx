@@ -1,8 +1,6 @@
 import {
-  FileImageOutlined,
   DownloadOutlined,
   EyeOutlined,
-  FilePdfOutlined,
   TeamOutlined,
 } from "@ant-design/icons";
 import { DateField, Show, TextField } from "@refinedev/antd";
@@ -475,6 +473,7 @@ export const AssemblyShow = () => {
                     </Text>
                   </div>
                   <Segmented
+                    className="vr-proxy-tower-tabs"
                     block
                     options={towerOptions}
                     value={selectedTower}
@@ -491,24 +490,40 @@ export const AssemblyShow = () => {
                     key: String(group.id),
                     label: (
                       <div className="vr-proxy-collapse-header">
-                        <div className="vr-proxy-collapse-title">
-                          <Text strong>{group.representative.unit ?? "Sin unidad"}</Text>
-                          <Title level={5} style={{ margin: 0 }}>
-                            {group.representative.name}
-                          </Title>
+                        <div className="vr-proxy-collapse-identity">
+                          <div className="vr-proxy-unit-badge">
+                            <span>ID</span>
+                            <strong>
+                              {group.representative.unit ?? "Sin unidad"}
+                            </strong>
+                          </div>
+                          <div className="vr-proxy-collapse-title">
+                            <Title level={5} style={{ margin: 0 }}>
+                              {group.representative.name}
+                            </Title>
+                            <Space wrap size={[8, 8]}>
+                              <Tag color="gold">Activo</Tag>
+                              <Text type="secondary">
+                                {group.representedHomesCount}{" "}
+                                {group.representedHomesCount === 1
+                                  ? "residente representado"
+                                  : "residentes representados"}
+                              </Text>
+                            </Space>
+                          </div>
                         </div>
                         <div className="vr-proxy-collapse-metrics">
                           <div className="vr-proxy-metric-chip">
                             <strong>{group.representedHomesCount}</strong>
-                            <span>Residentes representados</span>
+                            <span>Representados</span>
                           </div>
                           <div className="vr-proxy-metric-chip">
                             <strong>{group.totalCoefficient.toFixed(6)}</strong>
-                            <span>Coeficiente acumulado</span>
+                            <span>Coeficiente</span>
                           </div>
                           <div className="vr-proxy-metric-chip">
                             <strong>{group.supportsCount}</strong>
-                            <span>Soportes cargados</span>
+                            <span>Soportes</span>
                           </div>
                         </div>
                       </div>
@@ -531,97 +546,93 @@ export const AssemblyShow = () => {
                           return (
                             <List.Item
                               className="vr-proxy-resident-item"
-                              actions={[
-                                documentUrl ? (
-                                  <Button
-                                    key={`preview-${item.id}`}
-                                    size="small"
-                                    type="link"
-                                    icon={
-                                      isPdfDocument(nextPreview) ? (
-                                        <FilePdfOutlined />
-                                      ) : (
-                                        <FileImageOutlined />
-                                      )
-                                    }
-                                    onClick={() =>
-                                      nextPreview
-                                        ? setPreviewState({
-                                            document: nextPreview,
-                                            item,
-                                          })
-                                        : undefined
-                                    }
-                                  >
-                                    Ver poder
-                                  </Button>
-                                ) : (
-                                  <Tag key={`missing-${item.id}`}>Sin soporte</Tag>
-                                ),
-                                documentUrl ? (
-                                  <Button
-                                    key={`download-${item.id}`}
-                                    size="small"
-                                    type="link"
-                                    icon={<DownloadOutlined />}
-                                    href={documentUrl}
-                                    download={
-                                      item.document?.name ??
-                                      `poder-${item.document?.id ?? item.id}`
-                                    }
-                                    target="_blank"
-                                    rel="noreferrer"
-                                  >
-                                    Descargar
-                                  </Button>
-                                ) : null,
-                              ].filter(Boolean)}
                             >
-                              <div className="vr-proxy-resident-card">
-                                <div className="vr-proxy-resident-main">
-                                  <Space wrap>
-                                    <Text strong>
-                                      {item.representedResident?.unit ?? "Sin unidad"}
-                                    </Text>
-                                    <Title level={5} style={{ margin: 0 }}>
-                                      {item.representedResident?.name ?? "Sin registro"}
-                                    </Title>
-                                  </Space>
-                                  <div className="vr-proxy-resident-stats">
-                                    <div className="vr-proxy-resident-stat">
-                                      <span>Coeficiente</span>
-                                      <strong>
-                                        {Number(
-                                          item.representedResident?.coefficient ?? 0,
-                                        ).toFixed(6)}
-                                      </strong>
+                              <div className="vr-proxy-resident-shell">
+                                <div className="vr-proxy-resident-card">
+                                  <div className="vr-proxy-resident-main">
+                                    <div className="vr-proxy-resident-heading">
+                                      <div className="vr-proxy-resident-unit">
+                                        {item.representedResident?.unit ?? "Sin unidad"}
+                                      </div>
+                                      <Title level={5} style={{ margin: 0 }}>
+                                        {item.representedResident?.name ?? "Sin registro"}
+                                      </Title>
                                     </div>
-                                    <div className="vr-proxy-resident-stat">
-                                      <span>Registro</span>
-                                      {item.registeredAt ? (
-                                        <DateField
-                                          value={item.registeredAt}
-                                          format="DD MMM YYYY - hh:mm A"
-                                        />
-                                      ) : (
-                                        <Text type="secondary">Sin fecha</Text>
-                                      )}
+                                    <div className="vr-proxy-resident-stats">
+                                      <div className="vr-proxy-resident-stat">
+                                        <span>Coeficiente</span>
+                                        <strong>
+                                          {Number(
+                                            item.representedResident?.coefficient ?? 0,
+                                          ).toFixed(6)}
+                                        </strong>
+                                      </div>
+                                      <div className="vr-proxy-resident-stat">
+                                        <span>Registro</span>
+                                        {item.registeredAt ? (
+                                          <DateField
+                                            value={item.registeredAt}
+                                            format="DD MMM YYYY - hh:mm A"
+                                          />
+                                        ) : (
+                                          <Text type="secondary">Sin fecha</Text>
+                                        )}
+                                      </div>
+                                      <div className="vr-proxy-resident-stat">
+                                        <span>Soporte</span>
+                                        <strong>
+                                          {item.document?.name ? "Cargado" : "Pendiente"}
+                                        </strong>
+                                      </div>
                                     </div>
-                                    <div className="vr-proxy-resident-stat">
-                                      <span>Soporte</span>
-                                      <strong>
-                                        {item.document?.name ? "Cargado" : "Pendiente"}
-                                      </strong>
-                                    </div>
+                                    <Space wrap size={[6, 6]}>
+                                      <Tag color="green">Activo</Tag>
+                                      {item.document?.name ? (
+                                        <Tag color="processing">
+                                          {item.document.name}
+                                        </Tag>
+                                      ) : null}
+                                    </Space>
                                   </div>
-                                  <Space wrap size={[6, 6]}>
-                                    <Tag color="green">Activo</Tag>
-                                    {item.document?.name ? (
-                                      <Tag color="processing">
-                                        {item.document.name}
-                                      </Tag>
-                                    ) : null}
-                                  </Space>
+                                </div>
+                                <div className="vr-proxy-resident-actions">
+                                  {documentUrl ? (
+                                    <Button
+                                      key={`preview-${item.id}`}
+                                      size="small"
+                                      type="link"
+                                      icon={<EyeOutlined />}
+                                      onClick={() =>
+                                        nextPreview
+                                          ? setPreviewState({
+                                              document: nextPreview,
+                                              item,
+                                            })
+                                          : undefined
+                                      }
+                                    >
+                                      Ver poder
+                                    </Button>
+                                  ) : (
+                                    <Tag>Sin soporte</Tag>
+                                  )}
+                                  {documentUrl ? (
+                                    <Button
+                                      key={`download-${item.id}`}
+                                      size="small"
+                                      type="link"
+                                      icon={<DownloadOutlined />}
+                                      href={documentUrl}
+                                      download={
+                                        item.document?.name ??
+                                        `poder-${item.document?.id ?? item.id}`
+                                      }
+                                      target="_blank"
+                                      rel="noreferrer"
+                                    >
+                                      Descargar
+                                    </Button>
+                                  ) : null}
                                 </div>
                               </div>
                             </List.Item>
@@ -658,89 +669,85 @@ export const AssemblyShow = () => {
                       return (
                         <List.Item
                           className="vr-proxy-resident-item"
-                          actions={[
-                            documentUrl ? (
-                              <Button
-                                key={`preview-revoked-${item.id}`}
-                                size="small"
-                                type="link"
-                                icon={
-                                  isPdfDocument(nextPreview) ? (
-                                    <FilePdfOutlined />
-                                  ) : (
-                                    <FileImageOutlined />
-                                  )
-                                }
-                                onClick={() =>
-                                  nextPreview
-                                    ? setPreviewState({
-                                        document: nextPreview,
-                                        item,
-                                      })
-                                    : undefined
-                                }
-                              >
-                                Ver poder
-                              </Button>
-                            ) : (
-                              <Tag key={`missing-revoked-${item.id}`}>Sin soporte</Tag>
-                            ),
-                          ].filter(Boolean)}
                         >
-                          <div className="vr-proxy-resident-card">
-                            <div className="vr-proxy-resident-main">
-                              <Space wrap>
-                                <Text strong>
-                                  {item.representedResident?.unit ?? "Sin unidad"}
-                                </Text>
-                                <Title level={5} style={{ margin: 0 }}>
-                                  {item.representedResident?.name ?? "Sin registro"}
-                                </Title>
-                              </Space>
-                              <div className="vr-proxy-resident-stats">
-                                <div className="vr-proxy-resident-stat">
-                                  <span>Revocación</span>
-                                  {item.revokedAt ? (
-                                    <DateField
-                                      value={item.revokedAt}
-                                      format="DD MMM YYYY - hh:mm A"
-                                    />
-                                  ) : (
-                                    <Text type="secondary">Sin fecha</Text>
-                                  )}
+                          <div className="vr-proxy-resident-shell">
+                            <div className="vr-proxy-resident-card">
+                              <div className="vr-proxy-resident-main">
+                                <div className="vr-proxy-resident-heading">
+                                  <div className="vr-proxy-resident-unit">
+                                    {item.representedResident?.unit ?? "Sin unidad"}
+                                  </div>
+                                  <Title level={5} style={{ margin: 0 }}>
+                                    {item.representedResident?.name ?? "Sin registro"}
+                                  </Title>
                                 </div>
-                                <div className="vr-proxy-resident-stat">
-                                  <span>Representante</span>
-                                  <strong>
-                                    {item.submittedBy?.unit ??
-                                      item.submittedBy?.name ??
-                                      "Sin registro"}
-                                  </strong>
+                                <div className="vr-proxy-resident-stats">
+                                  <div className="vr-proxy-resident-stat">
+                                    <span>Revocación</span>
+                                    {item.revokedAt ? (
+                                      <DateField
+                                        value={item.revokedAt}
+                                        format="DD MMM YYYY - hh:mm A"
+                                      />
+                                    ) : (
+                                      <Text type="secondary">Sin fecha</Text>
+                                    )}
+                                  </div>
+                                  <div className="vr-proxy-resident-stat">
+                                    <span>Representante</span>
+                                    <strong>
+                                      {item.submittedBy?.unit ??
+                                        item.submittedBy?.name ??
+                                        "Sin registro"}
+                                    </strong>
+                                  </div>
+                                  <div className="vr-proxy-resident-stat">
+                                    <span>Soporte</span>
+                                    <strong>
+                                      {item.document?.name ? "Disponible" : "Sin soporte"}
+                                    </strong>
+                                  </div>
                                 </div>
-                                <div className="vr-proxy-resident-stat">
-                                  <span>Soporte</span>
-                                  <strong>
-                                    {item.document?.name ? "Disponible" : "Sin soporte"}
-                                  </strong>
-                                </div>
-                              </div>
-                              <Space wrap size={[6, 6]}>
-                                <Tag color="red">Revocado</Tag>
-                                {item.submittedBy?.unit ? (
-                                  <Tag color="processing">
-                                    Intentó representar: {item.submittedBy.unit}
-                                  </Tag>
+                                <Space wrap size={[6, 6]}>
+                                  <Tag color="red">Revocado</Tag>
+                                  {item.submittedBy?.unit ? (
+                                    <Tag color="processing">
+                                      Intentó representar: {item.submittedBy.unit}
+                                    </Tag>
+                                  ) : null}
+                                </Space>
+                                <Paragraph style={{ marginBottom: 0, marginTop: 12 }}>
+                                  <Text strong>Motivo:</Text>{" "}
+                                  {item.revokedReason ?? "Sin observación registrada."}
+                                </Paragraph>
+                                {item.revokedBy?.name ? (
+                                  <Text type="secondary">
+                                    Revocado por {item.revokedBy.name}
+                                  </Text>
                                 ) : null}
-                              </Space>
-                              <Paragraph style={{ marginBottom: 0, marginTop: 12 }}>
-                                <Text strong>Motivo:</Text>{" "}
-                                {item.revokedReason ?? "Sin observación registrada."}
-                              </Paragraph>
-                              {item.revokedBy?.name ? (
-                                <Text type="secondary">
-                                  Revocado por {item.revokedBy.name}
-                                </Text>
-                              ) : null}
+                              </div>
+                            </div>
+                            <div className="vr-proxy-resident-actions">
+                              {documentUrl ? (
+                                <Button
+                                  key={`preview-revoked-${item.id}`}
+                                  size="small"
+                                  type="link"
+                                  icon={<EyeOutlined />}
+                                  onClick={() =>
+                                    nextPreview
+                                      ? setPreviewState({
+                                          document: nextPreview,
+                                          item,
+                                        })
+                                      : undefined
+                                  }
+                                >
+                                  Ver poder
+                                </Button>
+                              ) : (
+                                <Tag>Sin soporte</Tag>
+                              )}
                             </div>
                           </div>
                         </List.Item>
