@@ -7,7 +7,7 @@ import {
   ReloadOutlined,
   TrophyOutlined,
 } from "@ant-design/icons";
-import { useCustom } from "@refinedev/core";
+import { useCustom, useCustomMutation } from "@refinedev/core";
 import {
   App as AntdApp,
   Alert,
@@ -103,6 +103,20 @@ type ResultsOverviewResponse = {
     totalWeight: number;
   };
 };
+
+type RepairAssemblySummary = {
+  assemblyId: number;
+  updatedUsers: number;
+  updatedVotes: number;
+};
+
+type RepairVoteWeightsResponse =
+  | RepairAssemblySummary
+  | {
+      assemblies: RepairAssemblySummary[];
+      updatedUsers: number;
+      updatedVotes: number;
+    };
 
 type ResidentBallotResponse = {
   surveys: Array<{
@@ -418,6 +432,7 @@ export const VotingResultsScene = ({ audience }: VotingResultsSceneProps) => {
     audience === "admin" ? "all" : "open",
   );
   const [exporting, setExporting] = useState<"excel" | "pdf" | null>(null);
+  const recalculateWeights = useCustomMutation<RepairVoteWeightsResponse>();
 
   const overviewQuery = useCustom<ResultsOverviewResponse>({
     method: "get",
@@ -854,6 +869,36 @@ export const VotingResultsScene = ({ audience }: VotingResultsSceneProps) => {
     }
   };
 
+  const handleRecalculateWeights = async () => {
+    try {
+      const response = await recalculateWeights.mutateAsync({
+        url: `${API_URL}/api/votes/admin/recalculate-weights`,
+        method: "post",
+        values: {},
+        errorNotification: false,
+        successNotification: false,
+      });
+      const payload = response.data;
+      const updatedVotes = Number(payload?.updatedVotes ?? 0);
+      const updatedUsers = Number(payload?.updatedUsers ?? 0);
+      const assembliesCount =
+        payload && "assemblies" in payload && Array.isArray(payload.assemblies)
+          ? payload.assemblies.length
+          : 1;
+
+      message.success(
+        `Recalculo completado. Asambleas: ${assembliesCount}. Usuarios ajustados: ${updatedUsers}. Votos ajustados: ${updatedVotes}.`,
+      );
+      await overviewQuery.query.refetch();
+    } catch (error) {
+      message.error(
+        error instanceof Error
+          ? error.message
+          : "No fue posible recalcular los pesos de voto.",
+      );
+    }
+  };
+
   return (
     <Space direction="vertical" size={20} style={{ width: "100%" }}>
       <PageIntro
@@ -877,6 +922,12 @@ export const VotingResultsScene = ({ audience }: VotingResultsSceneProps) => {
             <div className="vr-results-toolbar-actions">
               {audience === "admin" ? (
                 <>
+                  <Button
+                    loading={recalculateWeights.mutation.isPending}
+                    onClick={handleRecalculateWeights}
+                  >
+                    Recalcular pesos
+                  </Button>
                   <Button
                     icon={<FileExcelOutlined />}
                     loading={exporting === "excel"}
