@@ -292,7 +292,7 @@ const SurveyResultCard = ({ survey }: { survey: SurveyResult }) => {
             ) : null}
 
             <div className="vr-results-question-meta">
-              <span>{survey.summary.totalVotes} votos emitidos</span>
+              <span>{survey.summary.totalVotes} participantes</span>
               <span>
                 Peso acumulado {formatWeight(survey.summary.totalWeight)}
               </span>
@@ -349,7 +349,7 @@ const SurveyResultCard = ({ survey }: { survey: SurveyResult }) => {
                   {survey.winningOption
                     ? `${
                         survey.winningOption.totalVotes
-                      } votos · peso ${formatWeight(
+                      } registros · peso ${formatWeight(
                         survey.winningOption.totalWeight,
                       )}`
                     : "Esperando participación"}
@@ -378,7 +378,7 @@ const SurveyResultCard = ({ survey }: { survey: SurveyResult }) => {
                         <span>{option.text}</span>
                       </div>
                       <div className="vr-results-option-metrics">
-                        {option.totalVotes} votos ·{" "}
+                        {option.totalVotes} registros ·{" "}
                         {formatWeight(option.totalWeight)}
                       </div>
                     </div>
@@ -799,7 +799,7 @@ export const VotingResultsScene = ({ audience }: VotingResultsSceneProps) => {
               [
                 "Participacion",
                 sanitizePdfText(
-                  `${survey.summary.totalVotes} votos · peso ${formatWeight(
+                  `${survey.summary.totalVotes} participantes · peso ${formatWeight(
                     survey.summary.totalWeight,
                   )}`,
                 ),
@@ -945,9 +945,9 @@ export const VotingResultsScene = ({ audience }: VotingResultsSceneProps) => {
             hint="Resultados ya consolidados"
           />
           <SummaryCard
-            label="Votos emitidos"
+            label="Participaciones"
             value={overview.summary.totalVotes}
-            hint="Total de registros de voto"
+            hint="Total de registros emitidos"
           />
           <SummaryCard
             label="Participantes únicos"
