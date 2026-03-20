@@ -1439,6 +1439,23 @@ body {
   padding-block: 8px;
 }
 
+.vr-proxy-resident-list--compact .ant-list-items {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.vr-proxy-resident-list--compact .ant-list-item {
+  margin: 0;
+  padding-block: 0;
+  border-block-end: none !important;
+}
+
+.vr-proxy-resident-list--compact .vr-proxy-resident-shell,
+.vr-proxy-resident-list--compact .vr-proxy-resident-card {
+  height: 100%;
+}
+
 .vr-proxy-resident-item {
   align-items: flex-start !important;
 }
@@ -1566,6 +1583,16 @@ body {
   border: none;
   border-radius: 18px;
   background: #f7f2e6;
+}
+
+.vr-proxy-preview-stage {
+  display: grid;
+  place-items: center;
+  min-height: 56dvh;
+  padding: 12px;
+  overflow: auto;
+  border-radius: 20px;
+  background: rgba(255, 248, 234, 0.72);
 }
 
 .vr-proxy-preview-frame--mobile {
@@ -2078,6 +2105,10 @@ body {
     grid-template-columns: 1fr;
   }
 
+  .vr-proxy-resident-list--compact .ant-list-items {
+    grid-template-columns: 1fr;
+  }
+
   .vr-proxy-resident-actions {
     flex-direction: row;
     min-width: 0;
@@ -2276,6 +2307,10 @@ html[data-vr-layout="mobile"] .vr-proxy-resident-shell {
 }
 
 html[data-vr-layout="mobile"] .vr-proxy-resident-stats {
+  grid-template-columns: 1fr;
+}
+
+html[data-vr-layout="mobile"] .vr-proxy-resident-list--compact .ant-list-items {
   grid-template-columns: 1fr;
 }
 

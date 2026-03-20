@@ -1,6 +1,8 @@
 import {
   DownloadOutlined,
   EyeOutlined,
+  RotateLeftOutlined,
+  RotateRightOutlined,
   TeamOutlined,
 } from "@ant-design/icons";
 import axios from "axios";
@@ -24,7 +26,7 @@ import {
   Tag,
   Typography,
 } from "antd";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { axiosInstance } from "../../authProvider";
 import { PageIntro } from "../../components";
 import { API_URL } from "../../constants";
@@ -191,6 +193,7 @@ export const AssemblyShow = () => {
   const { query } = useShow({});
   const { data, isLoading } = query;
   const [previewState, setPreviewState] = useState<PreviewState | null>(null);
+  const [previewRotation, setPreviewRotation] = useState(0);
   const [revokeTarget, setRevokeTarget] = useState<ProxyItem | null>(null);
   const [activeTower, setActiveTower] = useState<string>("all");
   const [isDownloadingExhaustiveReport, setIsDownloadingExhaustiveReport] =
@@ -238,6 +241,11 @@ export const AssemblyShow = () => {
   const selectedTower = towerOptions.some((option) => option.value === activeTower)
     ? activeTower
     : "all";
+
+  useEffect(() => {
+    setPreviewRotation(0);
+  }, [previewState?.document.url, previewState?.item.id]);
+
   const filteredProxyItems = useMemo(
     () =>
       selectedTower === "all"
@@ -636,20 +644,17 @@ export const AssemblyShow = () => {
                             <Title level={5} style={{ margin: 0 }}>
                               {group.representative.name}
                             </Title>
-                            <Space wrap size={[8, 8]}>
-                              <Tag color="gold">Activo</Tag>
-                              <Text type="secondary">
-                                {group.representedHomesCount}{" "}
-                                {group.representedHomesCount === 1
-                                  ? "residente representado"
-                                  : "residentes representados"}{" "}
-                                · {group.totalVotesCount}{" "}
-                                {group.totalVotesCount === 1
-                                  ? "voto total"
-                                  : "votos totales"}{" "}
-                                (incluye titular)
-                              </Text>
-                            </Space>
+                            <Text type="secondary">
+                              {group.representedHomesCount}{" "}
+                              {group.representedHomesCount === 1
+                                ? "residente representado"
+                                : "residentes representados"}{" "}
+                              · {group.totalVotesCount}{" "}
+                              {group.totalVotesCount === 1
+                                ? "voto total"
+                                : "votos totales"}{" "}
+                              (incluye titular)
+                            </Text>
                           </div>
                         </div>
                         <div className="vr-proxy-collapse-metrics">
@@ -670,7 +675,7 @@ export const AssemblyShow = () => {
                     ),
                     children: (
                       <List
-                        className="vr-proxy-resident-list"
+                        className="vr-proxy-resident-list vr-proxy-resident-list--compact"
                         dataSource={group.items}
                         renderItem={(item) => {
                           const documentUrl = buildDocumentUrl(item.document?.url);
@@ -725,14 +730,6 @@ export const AssemblyShow = () => {
                                         </strong>
                                       </div>
                                     </div>
-                                    <Space wrap size={[6, 6]}>
-                                      <Tag color="green">Activo</Tag>
-                                      {item.document?.name ? (
-                                        <Tag color="processing">
-                                          {item.document.name}
-                                        </Tag>
-                                      ) : null}
-                                    </Space>
                                   </div>
                                 </div>
                                 <div className="vr-proxy-resident-actions">
@@ -754,7 +751,7 @@ export const AssemblyShow = () => {
                                       Ver poder
                                     </Button>
                                   ) : (
-                                    <Tag>Sin soporte</Tag>
+                                    <Text type="secondary">Sin soporte</Text>
                                   )}
                                   {documentUrl ? (
                                     <Button
@@ -886,7 +883,7 @@ export const AssemblyShow = () => {
                                   Ver poder
                                 </Button>
                               ) : (
-                                <Tag>Sin soporte</Tag>
+                                <Text type="secondary">Sin soporte</Text>
                               )}
                             </div>
                           </div>
@@ -918,6 +915,24 @@ export const AssemblyShow = () => {
                     Revocar poder
                   </Button>
                 ) : null,
+                <Button
+                  key="rotate-left"
+                  icon={<RotateLeftOutlined />}
+                  onClick={() =>
+                    setPreviewRotation((currentValue) => (currentValue + 270) % 360)
+                  }
+                >
+                  Girar izquierda
+                </Button>,
+                <Button
+                  key="rotate-right"
+                  icon={<RotateRightOutlined />}
+                  onClick={() =>
+                    setPreviewRotation((currentValue) => (currentValue + 90) % 360)
+                  }
+                >
+                  Girar derecha
+                </Button>,
                 <Button key="close" onClick={() => setPreviewState(null)}>
                   Cerrar
                 </Button>,
@@ -964,17 +979,29 @@ export const AssemblyShow = () => {
               ) : null}
             </Space>
             {isPdfDocument(previewState.document) ? (
-              <iframe
-                title={previewState.document.name ?? "Vista previa del poder"}
-                src={previewState.document.url}
-                className="vr-proxy-preview-frame"
-              />
+              <div className="vr-proxy-preview-stage">
+                <iframe
+                  title={previewState.document.name ?? "Vista previa del poder"}
+                  src={previewState.document.url}
+                  className="vr-proxy-preview-frame"
+                  style={{
+                    transform: `rotate(${previewRotation}deg)`,
+                    transition: "transform 0.22s ease",
+                    transformOrigin: "center center",
+                  }}
+                />
+              </div>
             ) : (
               <div className="vr-proxy-preview-image-shell">
                 <img
                   src={previewState.document.url}
                   alt={previewState.document.name ?? "Vista previa del poder"}
                   className="vr-proxy-preview-image"
+                  style={{
+                    transform: `rotate(${previewRotation}deg)`,
+                    transition: "transform 0.22s ease",
+                    transformOrigin: "center center",
+                  }}
                 />
               </div>
             )}

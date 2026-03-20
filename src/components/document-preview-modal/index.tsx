@@ -5,6 +5,8 @@ import {
   FileImageOutlined,
   FilePdfOutlined,
   FileTextOutlined,
+  RotateLeftOutlined,
+  RotateRightOutlined,
 } from "@ant-design/icons";
 import { Alert, Button, Empty, Modal, Space, Spin, Typography } from "antd";
 import { GlobalWorkerOptions, getDocument } from "pdfjs-dist";
@@ -122,9 +124,15 @@ export const DocumentPreviewModal = ({
   const [pdfPreviewPages, setPdfPreviewPages] = useState<PdfPreviewPage[]>([]);
   const [pdfPreviewError, setPdfPreviewError] = useState<string | null>(null);
   const [isLoadingPdf, setIsLoadingPdf] = useState(false);
+  const [previewRotation, setPreviewRotation] = useState(0);
   const shouldShowOpenAction =
     Boolean(selectedDocument && fileUrl) &&
     (kind === "pdf" ? pdfPreviewPages.length === 0 && !isLoadingPdf : kind !== "image");
+  const canRotatePreview = Boolean(selectedDocument && (kind === "pdf" || kind === "image"));
+
+  useEffect(() => {
+    setPreviewRotation(0);
+  }, [selectedDocument?.id, fileUrl, kind, open]);
 
   useEffect(() => {
     if (!open || !selectedDocument || kind !== "pdf" || !fileUrl) {
@@ -248,6 +256,28 @@ export const DocumentPreviewModal = ({
               <Button key="close" onClick={onClose}>
                 Cerrar
               </Button>,
+              canRotatePreview ? (
+                <Button
+                  key="rotate-left"
+                  icon={<RotateLeftOutlined />}
+                  onClick={() =>
+                    setPreviewRotation((currentValue) => (currentValue + 270) % 360)
+                  }
+                >
+                  Girar izquierda
+                </Button>
+              ) : null,
+              canRotatePreview ? (
+                <Button
+                  key="rotate-right"
+                  icon={<RotateRightOutlined />}
+                  onClick={() =>
+                    setPreviewRotation((currentValue) => (currentValue + 90) % 360)
+                  }
+                >
+                  Girar derecha
+                </Button>
+              ) : null,
               shouldShowOpenAction ? (
                 <Button
                   key="open"
@@ -294,6 +324,11 @@ export const DocumentPreviewModal = ({
                     <img
                       src={page.src}
                       alt={`${selectedDocument.title} - pagina ${page.pageNumber}`}
+                      style={{
+                        transform: `rotate(${previewRotation}deg)`,
+                        transition: "transform 0.22s ease",
+                        transformOrigin: "center center",
+                      }}
                     />
                   </figure>
                 ))}
@@ -324,6 +359,11 @@ export const DocumentPreviewModal = ({
             src={fileUrl}
             alt={selectedDocument.title}
             className="vr-proxy-preview-image"
+            style={{
+              transform: `rotate(${previewRotation}deg)`,
+              transition: "transform 0.22s ease",
+              transformOrigin: "center center",
+            }}
           />
         </div>
       ) : (
